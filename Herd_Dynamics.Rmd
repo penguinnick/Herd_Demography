@@ -3,9 +3,9 @@ title: "To Cull or Not to Cull? Using Population Projection Modeling to Reveal R
 author: "Nicholas Triozzi"
 date: "2025-02-25"
 output:
+  html_document: default
   word_document: 
     reference_docx: Rmd_Appendix_template.docx
-  html_document: default
 bibliography: Appendix_bib.bib
 link-citations: TRUE
 ---
@@ -19,8 +19,8 @@ This document outlines the procedures used to simulate goat and sheep herd dynam
 ```{r, setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-install.packages("devtools")
-devtools::install_github("penguinnick/HerdDynamics")
+# install.packages("devtools")
+# devtools::install_github("penguinnick/HerdDynamics")
 library(HerdDynamics)
 library(dplyr)
 library(flextable)
@@ -34,18 +34,15 @@ library(ggplot2)
 ```
 
 ## Overview
-The population projection model presented here uses the `HerdDynamics` package, which features wrapper functions for the [mmage package](https://gitlab.cirad.fr/selmet/livtools/mmage) [@Lesnoff2024] and customized scripts for comparing different herd culling strategies [@Triozzi2024]. In the `HerdDynamics` package, procedures described in the [mmage reference manual](https://gitlab.cirad.fr/selmet/livtools/mmage/-/blob/master/doc/mmage_v1.7.pdf?ref_type=heads) have been consolidated into wrapper functions such as "build_tcla", and "build.param". 
+The population projection model presented here uses the [HerdDynamics](https://github.com/penguinnick/HerdDynamics) package for R, which features wrapper functions for the [mmage package](https://gitlab.cirad.fr/selmet/livtools/mmage) [@Lesnoff2024] and customized scripts for comparing different herd culling strategies [@Triozzi2024]. In the `HerdDynamics` package, some procedures described in the [mmage reference manual](https://gitlab.cirad.fr/selmet/livtools/mmage/-/blob/master/doc/mmage_v1.7.pdf?ref_type=heads) have been consolidated into wrapper functions such as "build_tcla", and "build.param".
 
-```{r, load-functions}
-# source("../R/build_tcla.R")
-# source("../R/buildparam.R")
-```
+The `HerdDynamics` package is designed to be used with the `mmage` package, which is a powerful tool for analyzing age-structured populations. The `HerdDynamics` package provides additional functionality for simulating herd dynamics and optimizing culling strategies.
 
-# Setup - Population Projection Matrix
+## Setup - Population Projection Matrix
 
 Here, a Lefkovitch population projection model [@Lefkovitch1965] is used to project sheep and goat herd population dynamics. The probability of survival and fecundity are influenced by the competing risks of intrinsic mortality and offtake (i.e., slaugther). The transition matrix is created using published data on fecundity, intrinsic mortality, and offtake rates which are derived from theoretical culling profiles in archaeological literature (See Chapter Four). 
 
-## Age Classes
+# Age Classes
 
 The first step is to establish age classes for the simulation. Since the goal is to evaluate whether theoretical culling profiles allow herd sizes to be be maintained given intrinsic mortality and the reproductive biology of sheep and goats, the age classes and lengths (or widths) of each age class are informed by studies focusing on culling profiles. For example, Payne's [-@Payne1973] work separates ages into classes A through I and Grant's [-@Grant1982] work distinguishes age by month. Synthesized mandible ontogenic stages provided by  Vigne and Helmer [-@Vigne2007] demonstrate theses groupings and their corresponding ages in years. Although  Payne's [-@Payne1973] Age class grouping is the most common implementation Marom and Bar-Oz [-@Marom2009] compare 10 different the culling profiles by restructuring age groups to nine age classes ranging from 0.17 to 8 years. 
 

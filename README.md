@@ -1,25 +1,33 @@
+To Cull or Not to Cull? Using Population Projection Modeling to Reveal
+Risk-Sensitive Herd Culling Strategies
+================
+Nicholas Triozzi
+2025-02-25
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# Herd_Demography
+# Procedures for Herd Demography JCA Article
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of Herd_Demography is to …
+# Livestock Population Dynamics and Optimziation of Culling Rates
 
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+## Introduction
+
+This document outlines the procedures used to simulate goat and sheep
+herd dynamics under the constraints of various culling strategies. The
+content of this document and associated scripts are supporting materials
+for \[TITLE OF ARTICLE\].
+
+## Install HerdDynamics Package
+
+The first step is to install the `HerdDynamics` package. This package
+contains all the functions and data used in this analysis.
 
 ``` r
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
+devtools::install_github("penguinnick/HerdDynamics")
+library(HerdDynamics)
 ```
 
 You’ll still need to render `README.Rmd` regularly, to keep `README.md`

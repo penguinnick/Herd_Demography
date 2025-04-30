@@ -1,4 +1,7 @@
 ---
+title: "To Cull or Not to Cull? Using Population Projection Modeling to Reveal Risk-Sensitive Herd Culling Strategies"
+author: "Nicholas Triozzi"
+date: "2025-02-25"
 output: github_document
 ---
 
@@ -11,18 +14,49 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Herd_Demography
+# Procedures for Herd Demography JCA Article
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of Herd_Demography is to ...
 
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
+# Livestock Population Dynamics and Optimziation of Culling Rates
 
-```{r cars}
-summary(cars)
+## Introduction
+
+This document outlines the procedures used to simulate goat and sheep herd dynamics under the constraints of various culling strategies. The content of this document and associated scripts are supporting materials for [TITLE OF ARTICLE].
+
+## Install HerdDynamics Package
+
+The first step is to install the `HerdDynamics` package. This package contains all the functions and data used in this analysis.
+
+```{r install-HerdDynamics, eval = FALSE}
+devtools::install_github("penguinnick/HerdDynamics")
+library(HerdDynamics)
 ```
+
+We will also be using several other packages, including `ggplot2`, `dplyr`, and `purrr`. You can install these packages using the following command:
+
+```{r other-packages, eval = FALSE}
+library(ggplot2)
+library(dplyr)
+
+```
+## Age Classes
+
+The next step is to establish age classes for the simulation. Since the goal is to evaluate whether theoretical culling profiles allow herd sizes to be be maintained given intrinsic mortality and the reproductive biology of sheep and goats, the age classes and lengths (or widths) of each age class are informed by studies focusing on culling profiles. For example, Payne's [-@Payne1973] work separates ages into classes A through I and Grant's [-@Grant1982] work distinguishes age by month. Synthesized mandible ontogenic stages provided by  Vigne and Helmer [-@Vigne2007] demonstrate theses groupings and their corresponding ages in years. Although  Payne's [-@Payne1973] Age class grouping is the most common implementation Marom and Bar-Oz [-@Marom2009] compare 10 different the culling profiles by restructuring age groups to nine age classes ranging from 0.17 to 8 years. 
+
+```{r, age-class-table, echo=FALSE}
+
+age.class.table = data.frame(
+  "Age Class" = c("A (0-2m)",  "B (2-6m)", "C (6-12m)", "D (1-2y)", "E (2-3y)", "F (3-4y)", "G (4-6y)", "H (6-8y)", "I (>8y)"),
+  # months =  c( 2,      4,    6,  12, 12, 12, 12, 12, Inf),
+  months =  c( 2,      4,    6,  12, 12, 12, 24, 24, Inf),
+  years = c(c(0.17,  0.33, 0.5,   1, 1,   1, 2,   2, Inf)))
+knitr::kable(age.class.table, caption = "Table S1.1. Age classes and widths")
+
+```
+
 
 You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date.
 
