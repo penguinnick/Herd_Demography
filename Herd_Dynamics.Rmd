@@ -1,5 +1,6 @@
 ---
 title: "To Cull or Not to Cull? Using Population Projection Modeling to Reveal Risk-Sensitive Herd Culling Strategies"
+subtitle: "Supplemental Information 3"
 author: "Nicholas Triozzi"
 date: "2025-02-25"
 output:
@@ -20,7 +21,7 @@ This document outlines the procedures used to simulate goat and sheep herd dynam
 knitr::opts_chunk$set(echo = TRUE)
 
 # install.packages("devtools")
-# devtools::install_github("penguinnick/HerdDynamics")
+devtools::install_github("penguinnick/HerdDynamics")
 library(HerdDynamics)
 library(dplyr)
 library(flextable)
@@ -31,6 +32,16 @@ library(ggplot2)
 # source("../R/using.R")
 # using( "tidyverse", "sensitivity", "mmage", "rcartocolor", "flextable", "officer", "boot", "zoo", "FSA", "car")
 # using( "tidyverse", "mmage", "rcartocolor", "flextable", "officer", "boot", "zoo", "FSA", "car")
+```
+
+```{r flextable-defaults, include=FALSE}
+set_flextable_defaults(
+  font.family = "Helvetica",
+  font.size = 10,
+  padding = 2,
+  line_spacing = 1.2,
+  table.layout = "autofit"
+)
 ```
 
 ## Overview
@@ -47,43 +58,46 @@ Here, a Lefkovitch population projection model [@Lefkovitch1965] is used to proj
 The first step is to establish age classes for the simulation. Since the goal is to evaluate whether theoretical culling profiles allow herd sizes to be be maintained given intrinsic mortality and the reproductive biology of sheep and goats, the age classes and lengths (or widths) of each age class are informed by studies focusing on culling profiles. For example, Payne's [-@Payne1973] work separates ages into classes A through I and Grant's [-@Grant1982] work distinguishes age by month. Synthesized mandible ontogenic stages provided by  Vigne and Helmer [-@Vigne2007] demonstrate theses groupings and their corresponding ages in years. Although  Payne's [-@Payne1973] Age class grouping is the most common implementation Marom and Bar-Oz [-@Marom2009] compare 10 different the culling profiles by restructuring age groups to nine age classes ranging from 0.17 to 8 years. 
 
 ```{r, age-class-table, echo=FALSE}
-
+#-- create age class table
 age.class.table = data.frame(
   "Age Class" = c("A (0-2m)",  "B (2-6m)", "C (6-12m)", "D (1-2y)", "E (2-3y)", "F (3-4y)", "G (4-6y)", "H (6-8y)", "I (>8y)"),
   # months =  c( 2,      4,    6,  12, 12, 12, 12, 12, Inf),
   months =  c( 2,      4,    6,  12, 12, 12, 24, 24, Inf),
   years = c(c(0.17,  0.33, 0.5,   1, 1,   1, 2,   2, Inf)))
-knitr::kable(age.class.table, caption = "Table S1.1. Age classes and widths")
+
+Payne_ages
+age.class.table
+# knitr::kable(age.class.table, caption = "Table S1.1. Age classes and widths")
+knitr::kable(Payne_ages, caption = "Table S1.1. Age classes and widths")
 
 ```
 
-The model presented here is an "untruncated" model since the final age class includes animals 6 years old and up, with no terminal age specified for old animals. In this chunk, variable `lclass` is created as a vector of integers corresponding to the width of each age class in months. Here, an "untruncated" model is used which does not specify a terminal age for individuals in the oldest age class so the last value in `lclass` is set to `Inf`.
+The model presented here is an "untruncated" model since the final age class includes animals 8 years old and up, with no terminal age specified for old animals. The age classes according to Payne [-@Payne1973] are included in  `HerdDynamics` as `Payne_ages`. Note the last value in `lclass` is set to `Inf`.
 
 ```{r, define-ageclass}
 
-# Payne's Class
-ageClasses = c("", "A (0-2m)",  "B (2-6m)", "C (6-12m)", "D (1-2y)", "E (2-3y)", "F (3-4y)", "G (4-6y)", "H (6-8y)", "I (>8y)")
+HerdDynamics::Payne_ages
 
-#-- Age classes in years
-# ages = c(  0.17,  0.5,   1, 2, 3, 4, 5, 6, 7)
-ages = c(  0.17,  0.5,   1, 2, 3, 4, 6, 8, 10)
-
-#-- length of each age class
-# lclass = c(0.17, 0.33, 0.5, 1, 1,   1, 1, 1, Inf ) # in years
-# lclass = c( 2,   4,    6, 12, 12, 12, 12, 12, Inf) # in months
-lclass =  c( 2,      4,    6,  12, 12, 12, 24, 24, Inf)
+# # Payne's Class
+# ageClasses = c("", "A (0-2m)",  "B (2-6m)", "C (6-12m)", "D (1-2y)", "E (2-3y)", "F (3-4y)", "G (4-6y)", "H (6-8y)", "I (>8y)")
+# 
+# #-- Age classes in years
+# # ages = c(  0.17,  0.5,   1, 2, 3, 4, 5, 6, 7)
+# ages = c(  0.17,  0.5,   1, 2, 3, 4, 6, 8, 10)
+# 
+# #-- length of each age class
+# # lclass = c(0.17, 0.33, 0.5, 1, 1,   1, 1, 1, Inf ) # in years
+# # lclass = c( 2,   4,    6, 12, 12, 12, 12, 12, Inf) # in months
+# lclass =  c( 2,      4,    6,  12, 12, 12, 24, 24, Inf)
 
 ```
 
 Once the age classes are set, the wrapper function `build_tcla()` from `HerdDynamics` uses the `mmage::fclass` function to create the data.frame `tcla`. Parameter `nbphase` is set to either 1 or 12 to indicate whether the model will eventually be run to project herd size change on a yearly or monthly basis. The `tcla` table includes for each age group, the length of each group (i.e., 2 months, 4 months, 6 months, 12 months, etc.), and the minimum and maximum ages of the group. This procedure is streamlined by the customized `build_tcla` function which is designed to adjust the values provided as input (lclass) according to `nbphase`, and recognize whether `lclass` is formatted for a "truncated" or "untruncated" model. Since the `lclass` variable has already been set up to track age in months, `nbphase` is set to 1.
 
 ```{r, tcla, echo=-4}
-#-- load tcla function
-# source("../R/mmagefclass.R")
-
 #-- Build tcla table using HerdDynamics::build_tcla function which uses mmage package. Here we use the same male and female age classes. The parameter nbphase is set to 1 since lclass is formatted as months.
 nbphase = 1
-tcla = build_tcla(female.ages = lclass, male.ages = lclass, nbphase = nbphase)
+tcla = build_tcla(female.ages = Payne_ages$lclass, male.ages = Payne_ages$lclass, nbphase = nbphase)
 
 flextable(tcla) %>% 
   theme_vanilla() %>% 
@@ -94,35 +108,39 @@ flextable(tcla) %>%
 
 ## Herd Culling Strategies
 
-In this step a list of different harvest profiles for various herd management goals is defined. These include Redding's [-@Redding1981] **Energy** and **Security**,  Payne's [-@Payne1973] **Meat**, **Milk**, and **Wool** strategies, and Vigne and Helmer's [-@Vigne2007] Meat and Milk types A and B (**MeatA**, **MeatB**, **MilkA**, **MilkB**) and **Fleece** strategies. Marom and Bar-Oz [-@Marom2009] provide survivorship probabilities standardized across nine age classes. From these data, a list (`offtake.models`) is created which will be converted to offtake probabilities of death to reflect the proportion of individuals in each age class removed from the herd. 
+In this step a list of different harvest profiles for various herd management goals is defined. These include Redding's [-@Redding1981] **Energy** and **Security**,  Payne's [-@Payne1973] **Meat**, **Milk**, and **Wool** strategies, and Vigne and Helmer's [-@Vigne2007] Meat and Milk types A and B (**MeatA**, **MeatB**, **MilkA**, **MilkB**) and **Fleece** strategies. Marom and Bar-Oz [-@Marom2009] provide survivorship probabilities standardized across nine age classes. These data are stored as a list in the HerdDynamics package as `offtake_models`. 
 
-The offtake rates given here are generated from zooarchaeological research which does not account for sex-based differences in culling practices.  But these offtake rates are often interpreted on the level of the herd regardless of sex. Here they are used to model the offtake rates of males. These rates are downscaled for females as described later. 
+The offtake rates given here are generated from zooarchaeological research which does not account for sex-based differences in culling practices.  But these offtake rates are often interpreted on the level of the herd regardless of sex. Here they are used to model the offtake rates of males. These rates are down-scaled for females as described later. 
 
 ```{r, theoretical-offtake-models, include=FALSE}
 
-#-- Create list of survivorship for various strategies (poff)
-offtake.models=list(
-      # age:      0,   2m ,  6m,   1y,   2,    4,   6,   8,     10
-      # age:      0,   A ,  B,   C,     D,    EF,   G,   HI,   I+
-  Energy =   c( 100, 90.4, 90.4, 77.6, 47.6, 25, 23.9, 18.2, 16.1, 11.8),  # Redding 1981
-  Security = c( 100, 90.4, 90.4, 64.5,   38, 25, 23.9, 18.2, 16.1, 11.8),  # Redding 1981
-  Meat     = c( 100,   85,   75,   70,     50, 30, 22,   19,   19, 10),    # Payne 1973
-  Milk     = c( 100,   47,   42,   39,     35, 28, 23,   18,   18, 10),    # Payne 1973
-  Wool     = c( 100,   85,   75,   65,     63, 57, 50,   43,   43, 20),    # Payne 1973
-  MeatA    = c( 100,   81,   34,   11,      7,  7,  3,    1,   1,  1),    # Vigne & Helmer 2007
-  MeatB    = c( 100,   86,   68,   28,      6,  6,  1,    1,   1,  1),    # Vigne & Helmer 2007
-  MilkA    = c( 100,   22,   11,    4,      3,  3,  2,    1,   1,  1),    # Vigne & Helmer 2007
-  MilkB    = c( 100,   83,   50,   36,     18, 18,  6,    1,   1,  1),    # Vigne & Helmer 2007
-  Fleece   = c( 100,   69,   35,   24,     17, 17,  6,    1,   1,  1))    # Vigne & Helmer 2007
+#-- use offtake models from HerdDynamics package
+HerdDynamics::offtake_models
+# #-- Create list of survivorship for various strategies (poff)
+# offtake.models=list(
+#       # age:      0,   2m ,  6m,   1y,   2,    4,   6,   8,     10
+#       # age:      0,   A ,  B,   C,     D,    EF,   G,   HI,   I+
+#   Energy =   c( 100, 90.4, 90.4, 77.6, 47.6, 25, 23.9, 18.2, 16.1, 11.8),  # Redding 1981
+#   Security = c( 100, 90.4, 90.4, 64.5,   38, 25, 23.9, 18.2, 16.1, 11.8),  # Redding 1981
+#   Meat     = c( 100,   85,   75,   70,     50, 30, 22,   19,   19, 10),    # Payne 1973
+#   Milk     = c( 100,   47,   42,   39,     35, 28, 23,   18,   18, 10),    # Payne 1973
+#   Wool     = c( 100,   85,   75,   65,     63, 57, 50,   43,   43, 20),    # Payne 1973
+#   MeatA    = c( 100,   81,   34,   11,      7,  7,  3,    1,   1,  1),    # Vigne & Helmer 2007
+#   MeatB    = c( 100,   86,   68,   28,      6,  6,  1,    1,   1,  1),    # Vigne & Helmer 2007
+#   MilkA    = c( 100,   22,   11,    4,      3,  3,  2,    1,   1,  1),    # Vigne & Helmer 2007
+#   MilkB    = c( 100,   83,   50,   36,     18, 18,  6,    1,   1,  1),    # Vigne & Helmer 2007
+#   Fleece   = c( 100,   69,   35,   24,     17, 17,  6,    1,   1,  1))    # Vigne & Helmer 2007
 
 ```
 
 ```{r, theoretical-survivorship-table, echo=FALSE}
 #-- default settings for tables
-T1 = cbind.data.frame( ageClasses , do.call( cbind.data.frame, args = c( offtake.models ) ) )
-T1$Age = ageClasses # c(0, ages)
+# T1 = cbind.data.frame( ageClasses , do.call( cbind.data.frame, args = c( offtake.models ) ) )
+T1 = cbind.data.frame(c("", Payne_ages$ageClasses) , do.call( cbind.data.frame, args = c( offtake_models) ) )
+colnames(T1)[1] = "Age Class" # = ageClasses # c(0, ages)
 
-T1ft = flextable(T1[-1,c(12, 2:11)]) %>% 
+# T1ft = flextable(T1[-1,c(12, 2:11)]) %>% 
+T1ft = flextable(T1[-1,]) %>%
   set_header_labels( MeatA = "Meat A", MeatB = "Meat B", MilkA = "Milk A", MilkB = "Milk B") %>%
   # footnote( i = 1, j = 1, value = as_paragraph( c("Marom and Bar-Oz (2009)" )),
   #               ref_symbols = c("a" ),
@@ -139,32 +157,38 @@ T1ft = flextable(T1[-1,c(12, 2:11)]) %>%
   autofit() %>%
   set_table_properties(
     layout = "autofit", 
-    align = "center",
+    align = "center"
     # opts_word = list("split" = FALSE, "keep_with_next" = TRUE)
     ) %>% 
   paginate(
-    group = "Age", # keep Sample.ID group across pages
+    group = "Age Class", # keep Sample.ID group across pages
     group_def = "rle"
     ) %>%
-  theme_vanilla()
+  theme_vanilla() 
 
-T1ft %>% set_caption("Table S1.2. The theoretical culling strategies with survivorship probabilities standardized by Marom and Bar-Oz (2009).")
+T1ft = T1ft %>% 
+  set_caption(
+    "Table 2. Percentage of herd predicted to survive under ten theoretical culling strategies associated with different production strategies, as presented by Marom and Bar-Oz (2009a). Survival probabilities derived from aRedding (1981), bPayne (1973), and cVigne and Helmer (2007) correspond to Payne's age class system.")
+T1ft  
+# set_caption("Table 2. The theoretical culling strategies with survivorship probabilities standardized by Marom and Bar-Oz (2009).")
 
 #-- properties for word doc output
 sect_properties <- prop_section(
   page_size = page_size(
-    orient = "landscape",
+    # orient = "landscape",
+    orient = "portrait",
     width = 8.5, height = 11
     ),
   type = "continuous",
-  page_margins = page_mar(top = 1.25)
+  # page_margins = page_mar(top = 1.25)
+  # page_margins = page_mar(left = 1)
 )
-# getwd()
+getwd()
 
 #-- create output word doc
-# save_as_docx(T1ft, path = "../../tables/Table2_survival_rates.docx", pr_section = sect_properties)
+save_as_docx(T1ft, path = "tables/Table2_survival_rates.docx", pr_section = sect_properties)
 
-rm(T1, T1ft)
+# rm(T1, T1ft)
 ```
 
 ## Age-at-death data from four Neolithic sites
@@ -176,25 +200,25 @@ Age-at-death data for sheep and goat mandibles collected from **Benkovac-Barice*
 wear.df = read.table(file = "./data/age_at_death_data.csv", sep = ",")
 
 #-- create list for each site/period
-wear.df.list = wear.df %>% group_by(Site, Period) %>% group_split(.keep = T)
+wear.df.list = wear.df %>% 
+  group_by(Site, Period) %>% 
+  group_split(.keep = T)
 
 #-- get names
-l.names = wear.df %>% group_by(Site, Period) %>% group_keys() %>% reframe(name = paste(Site, Period))
+l.names = wear.df %>% 
+  group_by(Site, Period) %>% 
+  group_keys() %>% 
+  reframe(name = paste(Site, Period))
 names(wear.df.list) = l.names$name
 
-#-- run counting function and survivorship function
-source("./R/correct_counts.R")
-source("./R/survivorship.R")
 
+#-- use HerdDynamics functions to calculate survivorship from age-at-death data
 ages.list = lapply( wear.df.list, 
                     function( a ) {
                       # adjusts counts for each age group where multiple age groups are listed,
                       t = correct.counts(a$Payne.Group, probability.correction = FALSE);
-                      # t = correct.counts(a$Payne.Group, probability.correction = TRUE); 
-                      # t$corr.freq = t$n * c( 6, 3, 2, 1, 1, 1, 0.5, 0.5, 0.25)
                       # calculates survivorship
                       cbind.data.frame( t, s = survivorship( t$n ) )
-                      # cbind.data.frame( t, s = survivorship( t$corr.freq ) ) 
                       }
                     )
 
@@ -219,15 +243,11 @@ culling.profiles2
 ```{r, Table-S1-3-site-survivorship, echo=FALSE}
 #-- Create Table of survival probabilities from culling data allocated to distribution of ages used in model
 
-T2 = cbind.data.frame( ageClasses , do.call( cbind.data.frame, args = c( culling.profiles )) )
-T2$Age = c(0,ages)
-# ageClasses2 = c( "A (0-2m)" , "B (2-6m)" , "C (6-12m)" , "D (1-2y)" , "EF (2-4y)" , "G (4-6y)" , "HI (6-10y)" , "10y+")
-# T2 = cbind.data.frame( ageClasses2 , do.call( cbind.data.frame, args = c( culling.profiles )) )
-# T2 = cbind.data.frame( ageClasses , do.call( cbind.data.frame, args = c( culling.profiles2 )) )
-# T2$Age = c( 0.17, 0.50, 1.00, 2.00, 4.00, 6.00, 10.00, Inf )
-# T2ft = flextable(T2[-1,c(1, 4,5,2,3,6)]) %>%
+T2 = cbind.data.frame( c("", Payne_ages$ageClasses) , do.call( cbind.data.frame, args = c( culling.profiles )) )
+colnames(T2)[1] = "Age Class"
 
-T2ft = flextable(T2[-1,c(1, 7, 4,5,2,3,6)]) %>%
+# T2ft = flextable(T2[-1,c(1, 7, 4,5,2,3,6)]) %>%
+T2ft = flextable(T2[-1,]) %>%
   colformat_double(digits = 2) %>%
   # set_header_labels(ageClasses2 = "Age Class", Age = "Age (years)") %>%
   set_header_labels(ageClasses = "Age Class", Age = "Age (years)") %>%
@@ -239,13 +259,15 @@ T2ft = flextable(T2[-1,c(1, 7, 4,5,2,3,6)]) %>%
     ) %>% 
   paginate(
     # group = "ageClasses2", # keep Sample.ID group across pages
-    group = "ageClasses", # keep Sample.ID group across pages
+    group = "Age Class", # keep Sample.ID group across pages
     group_def = "rle"
     ) %>%
   theme_vanilla()
 
-T2ft %>% set_caption("Table S1.3. Survival probabilities for caprines at four Neolithic Sites in Dalmatia, standardized into age groups used by Marom and Bar-Oz (2009).")
-# save_as_docx(T2ft, path = "../../tables/Table3_Site_survival_rates.docx", pr_section = sect_properties)
+T2ft = T2ft %>% set_caption("Table 3. Survival probabilities for caprines at four Neolithic Sites in Dalmatia.")
+
+save_as_docx(T2ft, path = "tables/Table3_Site_survival_rates.docx", pr_section = sect_properties)
+
 rm(T2, T2ft)
 ```
 
@@ -260,49 +282,45 @@ cbPalette = carto_pal(10, "Safe")
 
 ```{r, Figure-S1-1-suvivorship-curves, echo=FALSE, fig.dim=c(6 , 4), fig.cap="Figure S1.1. Survivorship curves for threoretical harvest strategies." }
 #-- a function to plot survivorship curves
-# source("./R/plot_offtake.R")
-
-HerdDynamics::plot_offtake(
-  lapply(offtake.models, function(l) 1-(l*0.01)) , ages = as.factor(c(0,ages)), title = "Survivorship curves") +
-  scale_x_discrete( labels = ageClasses  ) +
-  xlab("Age Class") +
-  theme_minimal() +
-  theme( axis.text.x = element_text( angle = 45))
+HerdDynamics::culling_multiplot()
 
 
-```
+HerdDynamics::culling_multiplot(culling.profiles)
 
+# 
+# culling_multiplot = function(survivorship_profiles, Payne = TRUE, agecats = NULL){
+#   
+#   if (Payne){
+#     df = cbind.data.frame(
+#       ages = c("", Payne_ages$ageClasses), 
+#       do.call( cbind.data.frame, args = c( survivorship_profiles) ) 
+#       )
+#   } else {
+#     df = cbind.data.frame(
+#       ages = agecats, 
+#       do.call( cbind.data.frame, args = c( survivorship_profiles) ) 
+#       )
+#   }
+#   df %>% 
+#     tidyr::gather(key = "Strategy", value = "p", -ages) %>%
+#     ggplot(aes(x = ages, y = p, group = Strategy)) +
+#     geom_line( colour = rcartocolor::carto_pal(10,"Safe")[1], lwd = 1) +
+#     ylab("Survivorship (%)") +
+#     xlab("Age Class") +
+#     facet_wrap(~Strategy) + 
+#     theme_classic() +
+#     theme(
+#       axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+#       axis.text.y = element_text(size = 10),
+#       legend.text = element_text(size = 10),
+#       legend.title = element_text(size = 12),
+#       axis.title = element_text(size = 12)
+#     )
+# }
 
-```{r, Fig2-site-survivorship, echo=FALSE, fig.dim=c(6, 4), fig.cap="Figure. C.2. Survivorship curves of empirical culling data as shown in Figure 5.1 in Chapter 5" }
-# -- Fig 2
-HerdDynamics::plot_offtake(
-  lapply(culling.profiles, function(l) 1-(l*0.01)) , ages = as.factor(c(0,ages)), title = "Survivorship curves") +
-  scale_x_discrete( labels = ageClasses  ) +
-  xlab("Age Class") +
-  theme_minimal() +
-  theme( axis.text.x = element_text( angle = 45))
+culling_multiplot(survivorship_profiles = offtake_models)
+culling_multiplot(survivorship_profiles = culling.profiles2)
 
-
-
-Fig2 = plot.offtake(culling.profiles, ageClasses, key = "Site") +
-# plot.offtake(culling.profiles, c("",ages.list$`Benkovac-Barice MN`$v), key = "Site") +
-  theme( axis.text.x = element_text( angle = 45, hjust = 1, size = 10  ),
-         axis.text.y = element_text( size = 10 ),
-         legend.text = element_text( size = 10 ),
-         legend.title = element_text( size = 12 ),
-         axis.title = element_text( size = 12 ),
-         title = element_blank()
-         ) 
-Fig2
-
-plot.offtake(append(culling.profiles, offtake.models[3:5]), ageClasses, key="Site") +
-  scale_linetype()
-
-  scale_linetype_manual(values = c(1,1,2,3,1,1,4,1),
-                        # "solid", "solid", "twodash", "longdash", "solid","solid","dotdash", "solid"),
-                        breaks = append(names(culling.profiles), names(offtake.models[3:5])))
-
-# ggsave("../../figures/Fig2_cullingprofiles.jpg", Fig2, width = 6, height = 4)
 ```
 
 ## Herd Population Growth Parameters
@@ -330,54 +348,37 @@ where `hpar` is the number of parturitions expected per female-time unit.
 
 ```{r, fertility-mortality-data, echo=FALSE}
 #-- read in parameters file for mortality, prolificacy, and parturition rates
-param.dat = read.csv("../data/parameters.csv")
+param.dat = read.csv("data/parameters.csv")
 #-- read in lambing and kidding rates
-pro.dat = read.csv("../data/prolificacy.csv")
+pro.dat = read.csv("data/prolificacy.csv")
 ```
 
-Using the mortality and prolificacy data called in the previous chunk two lists are created (one for goats, one for sheep) containing the fertility and mortality parameters used to compute **lambda** ($\lambda$), reproductive values, and project herd growth. The function `generate_ProlificacyRates()` is used to vary inter-annual fertility values.
+Using the mortality and prolificacy data called in the previous chunk two lists are created (one for goats, one for sheep) containing the fertility and mortality parameters used to compute **lambda** ($\lambda$), reproductive values, and project herd growth. The function `generate_prolificacy_rates()` is used to vary inter-annual fertility values. This function and `generate_infant_mortality_rates` are included in HerdDynamics package.
 
 ```{r, gen-pro-fun}
-generate_ProlificacyRates <- function( meanPro = MeanProlificacy, sdPro = sdProlificacy,  n = length( part.age.Ind : len.fclass )) {
-  
-  s = seq( 1 : n )
-  p.order = c( s[ s %% 2 == 1 ], rev( s[ s %% 2 != 1 ] ))
-  # Generate n values from a normal distribution
-  # values <- rnorm(n, meanPro, sdPro)
-  values <- rnorm(mean = meanPro, sd = sdPro, n = 100)
-  value.sample = sample(values, n)
-  # Sort the values
-  # sv <- sort( abs( values ) )
-  sv <- sort( abs( value.sample ) )
-  # Arrange values so that peak values are in the middle
-  arranged_values = sv[ p.order ]
-  
-  return(abs( arranged_values) )
-}
 
+#-- example prolificacy rates for goats
+replicate(n = 3, generate_prolificacy_rates(meanPro = NetPro$mn.pro[1], sdPro = NetPro$sd.pro[1], n = 6), simplify = "array")
+
+#--example of infant mortality rate function
+generate_infant_mortality_rates(Mort = param.dat$Mortality[1:3])
 ```
 
 The above function is used in this chunk to generate a series of prolificacy rates based on fertility data. Also defined is the function `Part.rate` which calculates $ARR$ (Equation 5.13 in chapter 5). The resulting parameters are given in Table 5.1 in Chapter 5.
 
 ```{r, parm-lists, echo=TRUE}
-param.dat$Age = ages
+# param.dat$Age = ages
 
 #-- function for auto-generating prolificacy rates, used in build param function when prolificacyRate="auto"
-source("../R/generate_prolificacy.R")
+# source("../R/generate_prolificacy.R")
 NetPro = pro.dat %>% group_by(Taxon) %>% reframe(mn.pro = mean(LitterSize), sd.pro = sd(LitterSize))
 NetPro
 
-#-- example prolificacy rates for goats
-replicate(n = 3, generate_ProlificacyRates(meanPro = NetPro$mn.pro[1], sdPro = NetPro$sd.pro[1], n = 6), simplify = "array")
 
 #-- Ages, parturition rate, and age of first parturition set here
 ages = unique(param.dat$Age)
 
-#-- parturition rate calculation
-Part.rate = function( mean.Litter, part.interval){
-  (mean.Litter * 365) / part.interval
-}
-
+ARR(mean_litter_size = 1.3, parturition_interval = 300)
 parturition.Interval = 300 
 #-- age of first parturition set to animals in the 1-2 year age class
 part.age = 2
@@ -392,7 +393,7 @@ sheep.mort.m = param.dat %>% filter(Taxon == "Sheep" & Sex == "Male") %>% select
 #-- create parms lists
 goat.parms = list(
   ages = ages,
-  parturition = Part.rate(NetPro$mn.pro[1], parturition.Interval),
+  parturition = ARR(NetPro$mn.pro[1], parturition.Interval),  # calculates annual reproduction rate
   parturition.Interval = 300, 
   part.age = part.age,
   MeanProlificacy = NetPro$mn.pro[1], 
@@ -403,7 +404,7 @@ goat.parms = list(
 
 sheep.parms = list(
   ages = ages,
-  parturition = Part.rate(NetPro$mn.pro[2], parturition.Interval),
+  parturition = ARR(NetPro$mn.pro[2], parturition.Interval), # calculates annual reproduction rate
   parturition.Interval = 300, 
   part.age = part.age,
   MeanProlificacy = NetPro$mn.pro[2], 

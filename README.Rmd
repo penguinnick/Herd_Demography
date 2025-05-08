@@ -3,6 +3,7 @@ title: "To Cull or Not to Cull? Using Population Projection Modeling to Reveal R
 author: "Nicholas Triozzi"
 date: "2025-02-25"
 output: github_document
+bibliography: Appendix_bib.bib
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -24,7 +25,7 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-This document outlines the procedures used to simulate goat and sheep herd dynamics under the constraints of various culling strategies. The content of this document and associated scripts are supporting materials for [TITLE OF ARTICLE].
+This document outlines the procedures used to simulate goat and sheep herd dynamics under the constraints of various culling strategies. The content of this document and associated scripts are supporting materials for  [TITLE OF ARTICLE].
 
 ## Install HerdDynamics Package
 
@@ -67,3 +68,5 @@ plot(pressure)
 ```
 
 In that case, don't forget to commit and push the resulting figure files, so they display on GitHub.
+
+## References
