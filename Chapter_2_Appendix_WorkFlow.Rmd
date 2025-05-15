@@ -912,9 +912,10 @@ The output of the projection is saves as `results`. When the projection is run f
 
 ```{r, project-herd, echo=TRUE}
 #-- load projectHerd function
-source("../R/projectHerd2.R")
+source("R/projectHerd2.R")
 
 listpar = unlist(listpar, recursive = F)
+
 results = lapply(listpar, function(l) { projectHerd2( listpar = l, p0 = p0) } )
 ```
 
