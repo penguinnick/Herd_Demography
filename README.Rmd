@@ -51,93 +51,37 @@ The `HerdDynamics` package is designed to be used with the `mmage` package, whic
 
 Here, a Lefkovitch population projection model [@Lefkovitch1965] is used to project sheep and goat herd population dynamics. The probability of survival and fecundity are influenced by the competing risks of intrinsic mortality and offtake (i.e., slaugther). The transition matrix is created using published data on fecundity, intrinsic mortality, and offtake rates which are derived from theoretical culling profiles in archaeological literature (See Chapter Four). 
 
-# Age Classes
+### Age Classes
 
-The first step is to establish age classes for the simulation. Since the goal is to evaluate whether theoretical culling profiles allow herd sizes to be be maintained given intrinsic mortality and the reproductive biology of sheep and goats, the age classes and lengths (or widths) of each age class are informed by studies focusing on culling profiles. For example, Payne's [-@Payne1973] work separates ages into classes A through I and Grant's [-@Grant1982] work distinguishes age by month. Synthesized mandible ontogenic stages provided by  Vigne and Helmer [-@Vigne2007] demonstrate theses groupings and their corresponding ages in years. Although  Payne's [-@Payne1973] Age class grouping is the most common implementation Marom and Bar-Oz [-@Marom2009] compare 10 different the culling profiles by restructuring age groups to nine age classes ranging from 0.17 to 8 years. 
-
-```{r, age-class-table, echo=FALSE}
-#-- create age class table
-age.class.table = data.frame(
-  "Age Class" = c("A (0-2m)",  "B (2-6m)", "C (6-12m)", "D (1-2y)", "E (2-3y)", "F (3-4y)", "G (4-6y)", "H (6-8y)", "I (>8y)"),
-  # months =  c( 2,      4,    6,  12, 12, 12, 12, 12, Inf),
-  months =  c( 2,      4,    6,  12, 12, 12, 24, 24, Inf),
-  years = c(c(0.17,  0.33, 0.5,   1, 1,   1, 2,   2, Inf)))
-
-Payne_ages
-age.class.table
-# knitr::kable(age.class.table, caption = "Table S1.1. Age classes and widths")
-knitr::kable(Payne_ages, caption = "Table S1.1. Age classes and widths")
-
-```
-
-The model presented here is an "untruncated" model since the final age class includes animals 8 years old and up, with no terminal age specified for old animals. The age classes according to Payne [-@Payne1973] are included in  `HerdDynamics` as `Payne_ages`. Note the last value in `lclass` is set to `Inf`.
+The first step is to establish age classes for the simulation. 
+The age classes according to Payne [-@Payne1973] are included in  `HerdDynamics` as `Payne_ages`. Note the last value in `lclass` is set to `Inf`. The model presented here is an "untruncated" model since the final age class includes animals 8 years old and up, with no terminal age specified for old animals.
 
 ```{r, define-ageclass}
-
 HerdDynamics::Payne_ages
-
-# # Payne's Class
-# ageClasses = c("", "A (0-2m)",  "B (2-6m)", "C (6-12m)", "D (1-2y)", "E (2-3y)", "F (3-4y)", "G (4-6y)", "H (6-8y)", "I (>8y)")
-# 
-# #-- Age classes in years
-# # ages = c(  0.17,  0.5,   1, 2, 3, 4, 5, 6, 7)
-# ages = c(  0.17,  0.5,   1, 2, 3, 4, 6, 8, 10)
-# 
-# #-- length of each age class
-# # lclass = c(0.17, 0.33, 0.5, 1, 1,   1, 1, 1, Inf ) # in years
-# # lclass = c( 2,   4,    6, 12, 12, 12, 12, 12, Inf) # in months
-# lclass =  c( 2,      4,    6,  12, 12, 12, 24, 24, Inf)
-
 ```
-
+### Transition Class Table (tcla)
 Once the age classes are set, the wrapper function `build_tcla()` from `HerdDynamics` uses the `mmage::fclass` function to create the data.frame `tcla`. Parameter `nbphase` sets the timestep interval, which should be either annually (12) or monthly (1). `tcla` table includes for each age group, the length of each group (i.e., 2 months, 4 months, 6 months, 12 months, etc.), and the minimum and maximum ages of the group. This procedure is streamlined by the customized `build_tcla` function which is designed to adjust the values provided as input (lclass) according to `nbphase`, and recognize whether `lclass` is formatted for a "truncated" or "untruncated" model. We use the `lclass` variable in the `Payne_ages` table provided by `HerdDynamics`, which has already been set up to track age in months. So we can set `nbphase` to 1.
 
-```{r, tcla, echo=-4}
-#-- Build tcla table using HerdDynamics::build_tcla function which uses mmage package. Here we use the same male and female age classes. The parameter nbphase is set to 1 since lclass is already formatted as months.
+```{r, tcla}
+#-- Build tcla table using HerdDynamics::build_tcla() 
 nbphase = 1
 tcla = build_tcla(female.ages = Payne_ages$lclass, male.ages = Payne_ages$lclass, nbphase = nbphase)
-
-flextable(tcla) %>% 
-  theme_vanilla() %>% 
-  autofit() %>%
-  set_caption( "Table S1.2. Initiated age and sex table (tcla), containing age classes, lengths, and minimum and maximum ages in months for each age class." )
+tcla
 ```
 
 
-## Herd Culling Strategies
+### Herd Culling Strategies
 
-`HerdDynamics` includes survivorship probabilities associated with Redding's [-@Redding1981] **Energy** and **Security**,  Payne's [-@Payne1973] **Meat**, **Milk**, and **Wool** strategies, and Vigne and Helmer's [-@Vigne2007] Meat and Milk types A and B (**MeatA**, **MeatB**, **MilkA**, **MilkB**) and **Fleece** strategies. Marom and Bar-Oz [-@Marom2009] provide survivorship probabilities that were standardized across nine age classes. These data are stored as a list in the HerdDynamics package as `offtake_models`. 
+Calling `HerdDynamics::offtake_models` gives a list of survivorship probabilities standardized across nine age classes by Marom and Bar-Oz [-@Marom2009] for Redding's [-@Redding1981] **Energy** and **Security**,  Payne's [-@Payne1973] **Meat**, **Milk**, and **Wool** strategies, and Vigne and Helmer's [-@Vigne2007] Meat and Milk types A and B (**MeatA**, **MeatB**, **MilkA**, **MilkB**) and **Fleece** strategies.
 
-The offtake rates given here are generated from zooarchaeological research which does not account for sex-based differences in culling practices.  But these offtake rates are often interpreted on the level of the herd regardless of sex. Here they are used to model the offtake rates of males. These rates are reduced for females in a later step. 
-
-```{r, theoretical-offtake-models, include=FALSE}
-
-#-- use offtake models from HerdDynamics package
-HerdDynamics::offtake_models
-# #-- Create list of survivorship for various strategies (poff)
-# offtake.models=list(
-#       # age:      0,   2m ,  6m,   1y,   2,    4,   6,   8,     10
-#       # age:      0,   A ,  B,   C,     D,    EF,   G,   HI,   I+
-#   Energy =   c( 100, 90.4, 90.4, 77.6, 47.6, 25, 23.9, 18.2, 16.1, 11.8),  # Redding 1981
-#   Security = c( 100, 90.4, 90.4, 64.5,   38, 25, 23.9, 18.2, 16.1, 11.8),  # Redding 1981
-#   Meat     = c( 100,   85,   75,   70,     50, 30, 22,   19,   19, 10),    # Payne 1973
-#   Milk     = c( 100,   47,   42,   39,     35, 28, 23,   18,   18, 10),    # Payne 1973
-#   Wool     = c( 100,   85,   75,   65,     63, 57, 50,   43,   43, 20),    # Payne 1973
-#   MeatA    = c( 100,   81,   34,   11,      7,  7,  3,    1,   1,  1),    # Vigne & Helmer 2007
-#   MeatB    = c( 100,   86,   68,   28,      6,  6,  1,    1,   1,  1),    # Vigne & Helmer 2007
-#   MilkA    = c( 100,   22,   11,    4,      3,  3,  2,    1,   1,  1),    # Vigne & Helmer 2007
-#   MilkB    = c( 100,   83,   50,   36,     18, 18,  6,    1,   1,  1),    # Vigne & Helmer 2007
-#   Fleece   = c( 100,   69,   35,   24,     17, 17,  6,    1,   1,  1))    # Vigne & Helmer 2007
-
+```{r, theoretical-offtake-models, include=TRUE}
+HerdDynamics::culling_multiplot(HerdDynamics::offtake_models)
 ```
 
-```{r, theoretical-survivorship-table, echo=FALSE}
-#-- default settings for tables
-# T1 = cbind.data.frame( ageClasses , do.call( cbind.data.frame, args = c( offtake.models ) ) )
+```{r, theoretical-survivorship-table, echo=FALSE, include=FALSE, eval=TRUE, results="hide"}
 T2 = cbind.data.frame(c("", Payne_ages$ageClasses) , do.call( cbind.data.frame, args = c( offtake_models) ) )
 colnames(T2)[1] = "Age Class" # = ageClasses # c(0, ages)
 
-# T1ft = flextable(T1[-1,c(12, 2:11)]) %>% 
 T2ft = flextable(T2[-1,]) %>%
   set_header_labels( MeatA = "Meat A", MeatB = "Meat B", MilkA = "Milk A", MilkB = "Milk B") %>%
   # footnote( i = 1, j = 1, value = as_paragraph( c("Marom and Bar-Oz (2009)" )),
@@ -162,13 +106,10 @@ T2ft = flextable(T2[-1,]) %>%
     group = "Age Class", # keep Sample.ID group across pages
     group_def = "rle"
     ) %>%
-  theme_vanilla() 
-
-T2ft = T2ft %>% 
+  theme_vanilla() %>% 
   set_caption(
     "Table 2. Percentage of herd predicted to survive under ten theoretical culling strategies associated with different production strategies, as presented by Marom and Bar-Oz (2009a). Survival probabilities derived from aRedding (1981), bPayne (1973), and cVigne and Helmer (2007) correspond to Payne's age class system.")
 T2ft  
-# set_caption("Table 2. The theoretical culling strategies with survivorship probabilities standardized by Marom and Bar-Oz (2009).")
 
 #-- properties for word doc output
 sect_properties <- prop_section(
@@ -189,9 +130,9 @@ save_as_docx(T2ft, path = "tables/Table2_survival_rates.docx", pr_section = sect
 rm(T2, T2ft)
 ```
 
-## Age-at-death data from four Neolithic sites
+### Age-at-death data from four Neolithic sites
 
-Age-at-death data for sheep and goat mandibles collected from **Benkovac-Barice**, **Islam Grčki**, **Smilčić**, and **Zemunik Donji** are used to create survival probabilities for each age class [@Triozzi2024]. First, the data is called from `age_at_death_data.csv`. The data has already been formatted and filtered, combining all goats and sheep as ovicaprids, and dropping Late Neolithic Islam Grcki, for which there are only 10 mandibles. The absolute frequencies are calculated using the `HerdDynamics` function, `correct_counts()` (see Appendix B) that accounts for mandibles that were assigned multiple age classes. Then the survivorship probabilities are calculated following Price et al. [-@Price2016], using the function `survivorship()` from `HerdDynamics` package. Lastly, the data is formatted as a list, similar to the `offtake.models` list created previously.
+Age-at-death data for sheep and goat mandibles collected from **Benkovac-Barice**, **Graduša-Lokve at Islam Grčki**, **Smilčić**, and **Zemunik Donji** are used to create survival probabilities for each age class [@Triozzi2024]. First, the data is called from `age_at_death_data.csv`. The data has already been formatted and filtered, combining all goats and sheep as ovicaprids, and dropping Late Neolithic Islam Grcki, for which there are only 10 mandibles. The absolute frequencies are calculated using the `HerdDynamics` function, `correct_counts()` to account for mandibles that were assigned multiple age classes. Survivorship probabilities are calculated following Price et al. [-@Price2016], using the function `survivorship()` from `HerdDynamics` package. Lastly, the data is formatted as a list, similar to the `offtake.models` list created previously.
 
 ```{r, age-at-death data, include=FALSE}
 #-- read in age-at-death data
@@ -233,8 +174,7 @@ culling.profiles2 = lapply( ages.list, function(l) {
   l$s[7] = l$s[8] = G
   l$s[9] = HI
   c( 100, l$s * 100 ) })
-culling.profiles
-culling.profiles2
+culling.profiles = culling.profiles2
 # rm(wear.df, wear.df.list, ages.list, l.names)
 ```
 
@@ -270,10 +210,6 @@ T3ft
 rm(T3, T3ft)
 ```
 
-
-### Plot survivorship curves
-
-The data in Tables C.2 and C.3 can now be visualized as survivorship curves. 
 ```{r, set-colorpalatte, include=FALSE}
 #-- set colorblind-friendly color palatte
 cbPalette = carto_pal(10, "Safe")
@@ -282,11 +218,8 @@ cbPalette = carto_pal(10, "Safe")
 ```{r, Figure-S1-1-suvivorship-curves, echo=FALSE, fig.dim=c(6 , 4), fig.cap="Figure S1.1. Survivorship curves for threoretical harvest strategies." }
 
 #-- a function to plot survivorship curves
-HerdDynamics::culling_multiplot()
-
-
 HerdDynamics::culling_multiplot(culling.profiles)
-HerdDynamics::culling_multiplot(c(offtake_models, culling.profiles))
+
 
 ```
 

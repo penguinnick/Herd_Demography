@@ -45,64 +45,14 @@ on fecundity, intrinsic mortality, and offtake rates which are derived
 from theoretical culling profiles in archaeological literature (See
 Chapter Four).
 
-# Age Classes
+### Age Classes
 
-The first step is to establish age classes for the simulation. Since the
-goal is to evaluate whether theoretical culling profiles allow herd
-sizes to be be maintained given intrinsic mortality and the reproductive
-biology of sheep and goats, the age classes and lengths (or widths) of
-each age class are informed by studies focusing on culling profiles. For
-example, Payne’s ([1973](#ref-Payne1973)) work separates ages into
-classes A through I and Grant’s ([1982](#ref-Grant1982)) work
-distinguishes age by month. Synthesized mandible ontogenic stages
-provided by Vigne and Helmer ([2007](#ref-Vigne2007)) demonstrate theses
-groupings and their corresponding ages in years. Although Payne’s
-([1973](#ref-Payne1973)) Age class grouping is the most common
-implementation Marom and Bar-Oz ([2009](#ref-Marom2009)) compare 10
-different the culling profiles by restructuring age groups to nine age
-classes ranging from 0.17 to 8 years.
-
-    ##   ageClasses  ages lclass
-    ## 1   A (0-2m)  0.17      2
-    ## 2   B (2-6m)  0.50      4
-    ## 3  C (6-12m)  1.00      6
-    ## 4   D (1-2y)  2.00     12
-    ## 5   E (2-3y)  3.00     12
-    ## 6   F (3-4y)  4.00     12
-    ## 7   G (4-6y)  6.00     24
-    ## 8   H (6-8y)  8.00     24
-    ## 9    I (>8y) 10.00    Inf
-
-    ##   Age.Class months years
-    ## 1  A (0-2m)      2  0.17
-    ## 2  B (2-6m)      4  0.33
-    ## 3 C (6-12m)      6  0.50
-    ## 4  D (1-2y)     12  1.00
-    ## 5  E (2-3y)     12  1.00
-    ## 6  F (3-4y)     12  1.00
-    ## 7  G (4-6y)     24  2.00
-    ## 8  H (6-8y)     24  2.00
-    ## 9   I (>8y)    Inf   Inf
-
-| ageClasses |  ages | lclass |
-|:-----------|------:|-------:|
-| A (0-2m)   |  0.17 |      2 |
-| B (2-6m)   |  0.50 |      4 |
-| C (6-12m)  |  1.00 |      6 |
-| D (1-2y)   |  2.00 |     12 |
-| E (2-3y)   |  3.00 |     12 |
-| F (3-4y)   |  4.00 |     12 |
-| G (4-6y)   |  6.00 |     24 |
-| H (6-8y)   |  8.00 |     24 |
-| I (\>8y)   | 10.00 |    Inf |
-
-Table S1.1. Age classes and widths
-
-The model presented here is an “untruncated” model since the final age
-class includes animals 8 years old and up, with no terminal age
-specified for old animals. The age classes according to Payne
-([1973](#ref-Payne1973)) are included in `HerdDynamics` as `Payne_ages`.
-Note the last value in `lclass` is set to `Inf`.
+The first step is to establish age classes for the simulation. The age
+classes according to Payne ([1973](#ref-Payne1973)) are included in
+`HerdDynamics` as `Payne_ages`. Note the last value in `lclass` is set
+to `Inf`. The model presented here is an “untruncated” model since the
+final age class includes animals 8 years old and up, with no terminal
+age specified for old animals.
 
 ``` r
 HerdDynamics::Payne_ages
@@ -119,19 +69,7 @@ HerdDynamics::Payne_ages
     ## 8   H (6-8y)  8.00     24
     ## 9    I (>8y) 10.00    Inf
 
-``` r
-# # Payne's Class
-# ageClasses = c("", "A (0-2m)",  "B (2-6m)", "C (6-12m)", "D (1-2y)", "E (2-3y)", "F (3-4y)", "G (4-6y)", "H (6-8y)", "I (>8y)")
-# 
-# #-- Age classes in years
-# # ages = c(  0.17,  0.5,   1, 2, 3, 4, 5, 6, 7)
-# ages = c(  0.17,  0.5,   1, 2, 3, 4, 6, 8, 10)
-# 
-# #-- length of each age class
-# # lclass = c(0.17, 0.33, 0.5, 1, 1,   1, 1, 1, Inf ) # in years
-# # lclass = c( 2,   4,    6, 12, 12, 12, 12, 12, Inf) # in months
-# lclass =  c( 2,      4,    6,  12, 12, 12, 24, 24, Inf)
-```
+### Transition Class Table (tcla)
 
 Once the age classes are set, the wrapper function `build_tcla()` from
 `HerdDynamics` uses the `mmage::fclass` function to create the
@@ -147,69 +85,74 @@ the `Payne_ages` table provided by `HerdDynamics`, which has already
 been set up to track age in months. So we can set `nbphase` to 1.
 
 ``` r
-#-- Build tcla table using HerdDynamics::build_tcla function which uses mmage package. Here we use the same male and female age classes. The parameter nbphase is set to 1 since lclass is already formatted as months.
+#-- Build tcla table using HerdDynamics::build_tcla() 
 nbphase = 1
 tcla = build_tcla(female.ages = Payne_ages$lclass, male.ages = Payne_ages$lclass, nbphase = nbphase)
-flextable(tcla) %>% 
-  theme_vanilla() %>% 
-  autofit() %>%
-  set_caption( "Table S1.2. Initiated age and sex table (tcla), containing age classes, lengths, and minimum and maximum ages in months for each age class." )
+tcla
 ```
 
-<img src="README_files/figure-gfm/tcla-1.png" width="564" />
+    ##    sex class lclass cellmin cellmax
+    ## 1    F     0      2       0       0
+    ## 2    F     1      2       1       2
+    ## 3    F     2      4       3       6
+    ## 4    F     3      6       7      12
+    ## 5    F     4     12      13      24
+    ## 6    F     5     12      25      36
+    ## 7    F     6     12      37      48
+    ## 8    F     7     24      49      72
+    ## 9    F     8     24      73      96
+    ## 10   F     9    Inf      97     Inf
+    ## 11   M     0      2       0       0
+    ## 12   M     1      2       1       2
+    ## 13   M     2      4       3       6
+    ## 14   M     3      6       7      12
+    ## 15   M     4     12      13      24
+    ## 16   M     5     12      25      36
+    ## 17   M     6     12      37      48
+    ## 18   M     7     24      49      72
+    ## 19   M     8     24      73      96
+    ## 20   M     9    Inf      97     Inf
 
-## Herd Culling Strategies
+### Herd Culling Strategies
 
-`HerdDynamics` includes survivorship probabilities associated with
-Redding’s ([1981](#ref-Redding1981)) **Energy** and **Security**,
-Payne’s ([1973](#ref-Payne1973)) **Meat**, **Milk**, and **Wool**
-strategies, and Vigne and Helmer’s ([2007](#ref-Vigne2007)) Meat and
-Milk types A and B (**MeatA**, **MeatB**, **MilkA**, **MilkB**) and
-**Fleece** strategies. Marom and Bar-Oz ([2009](#ref-Marom2009)) provide
-survivorship probabilities that were standardized across nine age
-classes. These data are stored as a list in the HerdDynamics package as
-`offtake_models`.
+Calling `HerdDynamics::offtake_models` gives a list of survivorship
+probabilities standardized across nine age classes by Marom and Bar-Oz
+([2009](#ref-Marom2009)) for Redding’s ([1981](#ref-Redding1981))
+**Energy** and **Security**, Payne’s ([1973](#ref-Payne1973)) **Meat**,
+**Milk**, and **Wool** strategies, and Vigne and Helmer’s
+([2007](#ref-Vigne2007)) Meat and Milk types A and B (**MeatA**,
+**MeatB**, **MilkA**, **MilkB**) and **Fleece** strategies.
 
-The offtake rates given here are generated from zooarchaeological
-research which does not account for sex-based differences in culling
-practices. But these offtake rates are often interpreted on the level of
-the herd regardless of sex. Here they are used to model the offtake
-rates of males. These rates are reduced for females in a later step.
+``` r
+HerdDynamics::culling_multiplot(HerdDynamics::offtake_models)
+```
 
-<img src="README_files/figure-gfm/theoretical-survivorship-table-1.png" width="1661" />
+![](README_files/figure-gfm/theoretical-offtake-models-1.png)<!-- -->
 
-    ## [1] "C:/Users/nt25j496/OneDrive - Universitaet Bern/Writing_Projects/Herd_Demography"
-
-## Age-at-death data from four Neolithic sites
+### Age-at-death data from four Neolithic sites
 
 Age-at-death data for sheep and goat mandibles collected from
-**Benkovac-Barice**, **Islam Grčki**, **Smilčić**, and **Zemunik Donji**
-are used to create survival probabilities for each age class ([Triozzi
-2024](#ref-Triozzi2024)). First, the data is called from
+**Benkovac-Barice**, **Graduša-Lokve at Islam Grčki**, **Smilčić**, and
+**Zemunik Donji** are used to create survival probabilities for each age
+class ([Triozzi 2024](#ref-Triozzi2024)). First, the data is called from
 `age_at_death_data.csv`. The data has already been formatted and
 filtered, combining all goats and sheep as ovicaprids, and dropping Late
 Neolithic Islam Grcki, for which there are only 10 mandibles. The
 absolute frequencies are calculated using the `HerdDynamics` function,
-`correct_counts()` (see Appendix B) that accounts for mandibles that
-were assigned multiple age classes. Then the survivorship probabilities
-are calculated following Price et al. ([2016](#ref-Price2016)), using
-the function `survivorship()` from `HerdDynamics` package. Lastly, the
-data is formatted as a list, similar to the `offtake.models` list
-created previously.
+`correct_counts()` to account for mandibles that were assigned multiple
+age classes. Survivorship probabilities are calculated following Price
+et al. ([2016](#ref-Price2016)), using the function `survivorship()`
+from `HerdDynamics` package. Lastly, the data is formatted as a list,
+similar to the `offtake.models` list created previously.
 
 <img src="README_files/figure-gfm/Table-3-site-survivorship-1.png" width="1287" />
 
-### Plot survivorship curves
-
-The data in Tables C.2 and C.3 can now be visualized as survivorship
-curves.
-
-![Figure S1.1. Survivorship curves for threoretical harvest
-strategies.](README_files/figure-gfm/Figure-S1-1-suvivorship-curves-1.png)![Figure
-S1.1. Survivorship curves for threoretical harvest
-strategies.](README_files/figure-gfm/Figure-S1-1-suvivorship-curves-2.png)![Figure
-S1.1. Survivorship curves for threoretical harvest
-strategies.](README_files/figure-gfm/Figure-S1-1-suvivorship-curves-3.png)
+<figure>
+<img src="README_files/figure-gfm/Figure-S1-1-suvivorship-curves-1.png"
+alt="Figure S1.1. Survivorship curves for threoretical harvest strategies." />
+<figcaption aria-hidden="true">Figure S1.1. Survivorship curves for
+threoretical harvest strategies.</figcaption>
+</figure>
 
 ## Herd Population Growth Parameters
 
@@ -1381,16 +1324,6 @@ head(lev.res.df)
 <div id="refs" class="references csl-bib-body hanging-indent"
 entry-spacing="0">
 
-<div id="ref-Grant1982" class="csl-entry">
-
-Grant, Annie. 1982. “<span class="nocase">The Use of Tooth Wear as a
-Guide to the Age of Domestic Ungulates</span>.” In *Ageing and Sexing
-Animal Bones from Archaeological Sites - British Archaeological Records
-International Series 109.*, edited by Bob Wilson, Caroline Grigson, and
-Sebastian Payne, 91–108. Oxford: Archaeopress.
-
-</div>
-
 <div id="ref-Lefkovitch1965" class="csl-entry">
 
 Lefkovitch, L. P. 1965. “<span class="nocase">The study of population
@@ -1463,7 +1396,7 @@ Doctoral Dissertation, University of Michigan.
 Triozzi, Nicholas Peter. 2024. “<span class="nocase">Herding is Risky
 Business: Agropastoral Strategies in Neolithic Northern
 Dalmatia</span>.” Ph.D. Dissertation, University of California, Santa
-Barbara.
+Barbara. <http://dissertations.umi.com/ucsb:16721>.
 
 </div>
 
