@@ -27,7 +27,7 @@ make.listpar = function( param.props, nbcycle, offtake.mortality  ){
           tcla = tcla, 
           parms = p, offtake = o, 
           female.offtake = female.offtake, 
-          truncated = truncated,  
+          # truncated = truncated,
           correctionfec = TRUE,
           nbphase = nbphase 
         )$param
