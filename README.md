@@ -41,9 +41,9 @@ Here, a Lefkovitch population projection model ([Lefkovitch
 population dynamics. The probability of survival and fecundity are
 influenced by the competing risks of intrinsic mortality and offtake
 (i.e., slaugther). The transition matrix is created using published data
-on fecundity, intrinsic mortality, and offtake rates which are derived
+on fecundity, intrinsic mortality , and offtake rates which are derived
 from theoretical culling profiles in archaeological literature (See
-Chapter Four).
+Supplementary Information 2).
 
 ### Age Classes
 
@@ -74,15 +74,16 @@ HerdDynamics::Payne_ages
 Once the age classes are set, the wrapper function `build_tcla()` from
 `HerdDynamics` uses the `mmage::fclass` function to create the
 data.frame `tcla`. Parameter `nbphase` sets the timestep interval, which
-should be either annually (12) or monthly (1). `tcla` table includes for
-each age group, the length of each group (i.e., 2 months, 4 months, 6
-months, 12 months, etc.), and the minimum and maximum ages of the group.
-This procedure is streamlined by the customized `build_tcla` function
-which is designed to adjust the values provided as input (lclass)
-according to `nbphase`, and recognize whether `lclass` is formatted for
-a “truncated” or “untruncated” model. We use the `lclass` variable in
-the `Payne_ages` table provided by `HerdDynamics`, which has already
-been set up to track age in months. So we can set `nbphase` to 1.
+should be either annually (12) or monthly (1). The `tcla` data.frame
+consists of the length of each group (i.e., 2 months, 4 months, 6
+months, 12 months, etc.) and the minimum and maximum ages of the group
+for males and females. This procedure is streamlined by the customized
+`build_tcla` function which is designed to adjust the values provided as
+input (lclass) according to `nbphase`, and recognize whether `lclass` is
+formatted for a “truncated” or “untruncated” model. We use the `lclass`
+variable in the `Payne_ages` table provided by `HerdDynamics`, which has
+already been set up to track age in months. So we can set `nbphase` to
+1.
 
 ``` r
 #-- Build tcla table using HerdDynamics::build_tcla() 
@@ -418,12 +419,12 @@ vary.fert.mort(parms = goat.parms)
     ## [1] 0.2750401
     ## 
     ## $f.mortality
-    ## [1] 0.28836290 0.20936609 0.12055848 0.06515195 0.11205936 0.11550642 0.20617116
-    ## [8] 0.40912531 0.41804890
+    ## [1] 0.28836290 0.20936609 0.12055848 0.07335851 0.09563192 0.13950978 0.22754331
+    ## [8] 0.41738953 0.42573679
     ## 
     ## $m.mortality
-    ## [1] 0.2413435 0.1466634 0.1264610 0.0398888 0.1226288 0.1461968 0.1596290
-    ## [8] 0.2064455 0.2366741
+    ## [1] 0.24134351 0.14666344 0.12646104 0.05654914 0.33972064 0.37549987 0.37634711
+    ## [8] 0.50020429 0.58072404
     ## 
     ## $prolificacy
     ## [1] 1.320242 1.612634 1.869362 1.984414 1.837791 1.403297
@@ -462,12 +463,12 @@ str(param$goat$Energy$param)
     ##  $ lclass : num  1 2 4 6 12 ...
     ##  $ cellmin: num  0 1 3 7 13 25 37 49 73 97 ...
     ##  $ cellmax: num  0 2 6 12 24 ...
-    ##  $ nupar  : num  0 0 0 0.147 1.807 ...
-    ##  $ ff     : num  0 0 0 0.101 1.241 ...
-    ##  $ fm     : num  0 0 0 0.101 1.241 ...
-    ##  $ pdea   : num  0.0836 0.1494 0.1163 0.097 0.0146 ...
-    ##  $ poff   : num  0.00687 0.01319 0.01567 0.03483 0.07632 ...
-    ##  $ g      : num  1 0.4558 0.1997 0.1137 0.0468 ...
+    ##  $ nupar  : num  0 0 0 0.147 1.815 ...
+    ##  $ ff     : num  0 0 0 0.101 1.246 ...
+    ##  $ fm     : num  0 0 0 0.101 1.246 ...
+    ##  $ pdea   : num  0.08357 0.14939 0.11631 0.09625 0.00554 ...
+    ##  $ poff   : num  0.00687 0.01319 0.01567 0.03484 0.07668 ...
+    ##  $ g      : num  1 0.4558 0.1997 0.114 0.0498 ...
 
 ``` r
 rm(sheep.param.props, goat.param.props, Baseline.offtake)
@@ -546,7 +547,7 @@ save(listpar, file = "data/listpar.RData")
 load(file = "data/listpar.RData")
 ```
 
-### Basic Herd structure and growth
+## Basic Herd structure and growth
 
 With the fertility and mortality rates have been established the next
 step is to extract the structure of the herd, lambda, and the proportion
@@ -565,7 +566,7 @@ previous chunk, the custom function `getLambda()` is run using `lapply`
 to obtain lambda, sex proportion, and number of individuals in each age
 class for the initial population. This function is a wrapper function
 that uses functions in the `mmage` package to obtain the dominant
-eigenvalue (lambda) to get the multiplication rate for the population.
+eigenvalue $/lambda$ to get the multiplication rate for the population.
 
 With the environment simulated as `listpar`, the chunk below calculates
 lambda and proportion of females for each year under each offtake
@@ -602,7 +603,7 @@ lambda.list = unlist(lambda.list, recursive = F)
 sex.prop.list = unlist(sex.prop.list, recursive = F)
 ```
 
-## Bootstrap lambda and sex proportions
+### Bootstrap lambda and sex proportions
 
 This chunk defines the function used in the bootstrap estimation of mean
 $\lambda$ ($\lambda_{boot}$) and proportion of females. The bootstrap is
@@ -662,7 +663,7 @@ repro.boot.df = cbind.data.frame(
       up.sex.F = up
       )
   )
-
+#-- view first six rows of results
 head(repro.boot.df[, 1:6])
 ```
 
@@ -705,13 +706,20 @@ correlated.
     ##        cor 
     ## -0.8618092
 
+<figure>
+<img src="README_files/figure-gfm/plot-sex-proportion-1.png"
+alt="Figure S3.4. Proportion of females and males for each strategy" />
+<figcaption aria-hidden="true">Figure S3.4. Proportion of females and
+males for each strategy</figcaption>
+</figure>
+
 ## Herd Structure
 
 This chunk calculates herd structure which is used to produce Figure 4.
 
 ``` r
 #-- set initial population size
-p0 = 150
+p0 = p0
 
 #-- call function getLambda to extract reproduction traits
 repro = lapply(listpar, function(l){
@@ -728,10 +736,10 @@ xini.to.data.frame = function( repro, ageClasses, ages ) {
     lapply( r, function( x ) {
       with(x, {
         # summarize initial herds (total males and females for each age class)
-        xini = initial.herd %>%    
-          group_by( class ) %>% 
+        xini = initial.herd %>%
+          group_by( class ) %>%
           reframe( n = as.integer( sum( xini ) ) )
-        }) 
+        })
       })
     })
   xini.list = unlist( xini.list, recursive = F ) # unlist species groupings
@@ -761,60 +769,60 @@ head(xini.df)
     ## # A tibble: 6 × 6
     ##   class     n Taxon strategy AgeClass  Age  
     ##   <int> <int> <chr> <fct>    <fct>     <chr>
-    ## 1     1    49 goat  Energy   A (0-2m)  0.17 
-    ## 2     2    56 goat  Energy   B (2-6m)  0.5  
-    ## 3     3    31 goat  Energy   C (6-12m) 1    
-    ## 4     4    10 goat  Energy   D (1-2y)  2    
+    ## 1     1    48 goat  Energy   A (0-2m)  0.17 
+    ## 2     2    57 goat  Energy   B (2-6m)  0.5  
+    ## 3     3    32 goat  Energy   C (6-12m) 1    
+    ## 4     4     9 goat  Energy   D (1-2y)  2    
     ## 5     5     1 goat  Energy   E (2-3y)  3    
     ## 6     6     0 goat  Energy   F (3-4y)  4
+
+Plot herd structure for each culling strategy showing number of animals
+in each age class for goats and sheep. ![Figure S3.5. Herd structure for
+each culling strategy showing number of animals in each age class for
+goats and sheep.](README_files/figure-gfm/Figure4-1.png)
 
 # Part III - Population Projection
 
 The next step is to simulate herd demographic change through time given
 the parameters defined above and the reproductive traits calculated for
-each model and culling profile. The initial herd size was established
-already as `p0` and the simulated environment as `listpar`. The number
-of times-teps is equal to the length of `listpar`.
+each model and culling profile. The initial herd size of 150 was
+established already as `p0` and the simulated environment as `listpar`.
+The number of timesteps is equal to the length of `listpar`.
 
-The projection is run using the script “projectHerd2.R”. This function
-takes fewer inputs than the `projectHerd()` function. First, `listpar`
-is created using the makeListpar.R function. This function simulates
-environmental variation of one herd under inter-annual variation in
-mortality and fertility. One herd, multiple offtake strategies can be
-assessed this way. Results are in the same format as projectHerd.R. This
-function is a wrapper function that streamlines the herd projection
-procedure described in the mmage documentation ([Lesnoff
-2024b](#ref-mmage)) but is used when the environment is predefined. The
-alternative function `projectHerd` has additional functionality such as
-varying environments from one step to the next. This is useful when
-there is only one `param` table but environmental variation is generated
-for each time-step. This process is explained in another document.
+The projection is run using the function `projectHerd2()`, which is a
+wrapper function that streamlines the herd projection procedure
+described in the mmage documentation ([Lesnoff 2024b](#ref-mmage)) but
+is used when the environment is predefined. The alternative is
+`HerdDynamics::projectHerd()` is useful when there is only one `param`
+table but environmental variation is generated for each time-step (See
+HerdDynamics documentation).
 
-The output of the projection is saves as `results`. When the projection
-is run for every strategy using the mortality and fertility rates for
-each taxon using `lapply`, the output is a list of length n.strategies
-\* n.taxa.
+The projection is run for every strategy using the mortality and
+fertility rates for each taxon using `lapply`, the output is `results`,
+a list of length n.strategies \* n.taxa.
 
 ``` r
 #-- load projectHerd function
 source("./R/projectHerd2.R")
 
+#-- project herd for each strategy
 listpar = unlist(listpar, recursive = F)
 results = lapply(listpar, function(l) { projectHerd2( listpar = l, p0 = p0) } )
-# results = lapply(listpar, function(l) { project_herd( listpar = l, p0 = p0) } )
 ```
 
 ## Output Metrics
 
-Here summary statistics of interest are calculated to compare how the
-different models perform (i.e., values that will be used to compare
-differences in herd size, etc.).
+Here we gather the results into a data.frame to produce plots and
+compare how the different models perform (i.e., values that will be used
+to compare differences in herd size, etc.).
 
-First, a wrapper function is defined as `pop.summary`, which takes the
-results list (`results`) and creates a list of data.frames each
-containing two columns: the time step (`time`) and the number of animals
-in the herd (`pop`). Then another wrapper function, `res.to.df` is used
-to create a single data.frame of all results which is used for plotting.
+First, a wrapper function is defined as `pop.summary2()`, which takes
+and creates a list of data.frames from `results`, each containing two
+columns: `time` and `pop`(ulation). `pop.summary2()` has the option of
+tracking population by sex.
+
+A second wrapper function, `res.to.df()` is defined to combine the list
+into a single data.frame which we use for plotting.
 
 ``` r
 #-- function to summarize dynamics of the total population through time
@@ -841,10 +849,7 @@ pop_summary2 = function(x, sex = FALSE, interval = "year"){
   return(out)
 }
 
-tot.pop.res = lapply(results, function(r){pop_summary2(r, sex = FALSE, interval = "year")})
-# tot.pop.res.sex = lapply(results, function(r){pop.summary(r, sex = TRUE, interval = "year")})
-
-# function to gather results into a single dataframe
+#-- function to gather results into a single data.frame
 res.to.df = function(tot.pop.res){
   df = do.call(rbind.data.frame, args=c(tot.pop.res, make.row.names=FALSE))
   strats = names(tot.pop.res)
@@ -854,42 +859,51 @@ res.to.df = function(tot.pop.res){
   df$strategy = ts[, 2]
   return(df)
 }
+```
+
+Run helper functions to gather results into a single data.frame
+
+``` r
+#-- summarize total population through time
+tot.pop.res = lapply(results, function(r){pop_summary2(r, sex = FALSE, interval = "year")})
 tot.pop.df = res.to.df(tot.pop.res)
+#-- uncomment to get results by sex
+# tot.pop.res.sex = lapply(results, function(r){pop.summary(r, sex = TRUE, interval = "year")})
 # tot.pop.df.sex = res.to.df(tot.pop.res.sex)
+
 head(tot.pop.df)
 ```
 
     ##   time       pop strategy Taxon
     ## 1    1 150.00000   Energy  goat
-    ## 2    2 147.29744   Energy  goat
-    ## 3    3 122.53690   Energy  goat
-    ## 4    4  96.93422   Energy  goat
-    ## 5    5  93.12667   Energy  goat
-    ## 6    6  80.79782   Energy  goat
+    ## 2    2 145.79544   Energy  goat
+    ## 3    3 120.73624   Energy  goat
+    ## 4    4  94.88171   Energy  goat
+    ## 5    5  90.65367   Energy  goat
+    ## 6    6  78.33084   Energy  goat
 
 ``` r
 # head(tot.pop.df.sex)
 ```
 
 <figure>
-<img src="README_files/figure-gfm/Fig5-1.png"
-alt="Figure. 5. Plots showing the change in sheep and goat herd sizes through time under the various survivorship profiles used." />
-<figcaption aria-hidden="true">Figure. 5. Plots showing the change in
-sheep and goat herd sizes through time under the various survivorship
-profiles used.</figcaption>
+<img src="README_files/figure-gfm/Fig6-1.png"
+alt="Figure. S3.6. Plots showing the change in sheep and goat herd sizes through time under the various culling strategies used." />
+<figcaption aria-hidden="true">Figure. S3.6. Plots showing the change in
+sheep and goat herd sizes through time under the various culling
+strategies used.</figcaption>
 </figure>
 
 ## Stochastic variation
 
 Since there is an element of stochastic variation, it is useful to
-examine multiple iterations of the simulation. Here `nbrep` is set as
-the number of simulations to replicate. A wrapper function is created,
-`stochastic.rep` which combines `make.listpar`, `projectHerd2`, and
-`pop.summary` functions. Then, the simulation is replicated `nbrep`
-times. Results are combined into a data.frame for plotting.
+examine multiple iterations of the simulation.
+
+To do this, we define a wrapper function, `stochastic.rep()` and use
+`replicate()` run the simulation 10 times. Results are combined into a
+`data.frame` for plotting using `matrix.to.df` and `list.to.mat`.
 
 ``` r
-set.seed(1056)
 #-- function to replicate
 stochastic.rep = function( p0, param.props, offtake.mortality, nbcycle ){
   #-- create new set of environmental parameters
@@ -904,7 +918,28 @@ stochastic.rep = function( p0, param.props, offtake.mortality, nbcycle ){
   pop_summary2(result, sex = FALSE, interval = "year")$pop
 }
 
-#-- set number
+#-- helper function to transform lists into matrix
+list.to.mat = function( l ){ 
+  n.col = length( l )
+  l.mat = matrix( unlist( l ), ncol = n.col)
+  rownames(l.mat) = unique(names(unlist(l)))
+  l.mat
+}
+
+#-- helper function to create df from matrix output of replicated stochastic.rep function
+matrix.to.df = function( mat ){
+  df = as.data.frame(mat)
+  df$time = as.numeric(str_replace_all(rownames(df), "[:alpha:]|[:punct:]", ""))
+  df$strategy = str_replace_all(rownames(df), "[:digit:]", "")
+  df %>% pivot_longer( cols = c(-time, -strategy) )
+}
+```
+
+Run replicated simulations
+
+``` r
+#-- set seed, number of replicates and cycles
+set.seed(1056)
 nbrep = 10
 nbcycle = nbcycle
 
@@ -919,22 +954,6 @@ stochastic.sim.res = replicate(
   simplify = "array"
   )
 
-#-- create df from matrix output of replicated stochastic.rep func
-matrix.to.df = function( mat ){
-  df = as.data.frame(mat)
-  df$time = as.numeric(str_replace_all(rownames(df), "[:alpha:]|[:punct:]", ""))
-  df$strategy = str_replace_all(rownames(df), "[:digit:]", "")
-  df %>% pivot_longer( cols = c(-time, -strategy) )
-}
-
-#-- function to transform lists into matrix
-list.to.mat = function( l ){ 
-  n.col = length( l )
-  l.mat = matrix( unlist( l ), ncol = n.col)
-  rownames(l.mat) = unique(names(unlist(l)))
-  l.mat
-}
-
 #-- create matrix, then df from results
 sto.res.mat = apply(stochastic.sim.res, 1, FUN = list.to.mat, simplify = F)
 sto.res.df = lapply(sto.res.mat, FUN = matrix.to.df)
@@ -948,42 +967,37 @@ sto.res.df = do.call(rbind.data.frame, sto.res.df)
 sto.res.df$strategy = factor(sto.res.df$strategy, levels = c(names(offtake.mortality)))
 ```
 
+Plot the results of the replicated stochastic simulations.
+
     ## Scale for colour is already present.
     ## Adding another scale for colour, which will replace the existing scale.
 
 <figure>
 <img src="README_files/figure-gfm/Figure7-1.png"
-alt="Figure. 7. Plots showing results of replicated projections of change in sheep and goat herd sizes through time under the various survivorship profiles used." />
-<figcaption aria-hidden="true">Figure. 7. Plots showing results of
+alt="Figure. S3.7. Plots showing results of replicated projections of change in sheep and goat herd sizes through time under the various survivorship profiles used." />
+<figcaption aria-hidden="true">Figure. S3.7. Plots showing results of
 replicated projections of change in sheep and goat herd sizes through
 time under the various survivorship profiles used.</figcaption>
 </figure>
 
-# Part IV - Optimizing offtake
+# Part IV - Optimizing Culling Rates
 
-Modification of offtake rates may allow for herd size to remain stable.
-An optimization routine is needed to determine the factor, $\varphi$, by
-which female offtake needs to be adjusted to maintain herd size. The
-goal is to achieve a steady state multiplication rate under stochastic
-changes in fertility and mortality. The first step is to determine the
-multiplication rate of the herd from one timestep to the next. This is
-done using the modified `mmage::fm` function, `mmagefm()`. In this
-chunk, a dataframe, `lambda.df` is created by obtaining the
-multiplication rate from the results of the herd projection which used
-the `listpar` object that simulates inter-annual variation in fertility
-and mortality.
+In this section we explore whether modifying culling rates can result in
+stable herd sizes.
 
-After creating `lambda.df`, an index of the years with lowest lambda is
-created. This index will be used to determine `phi` ($\varphi$) in a
-later step.
+We do this by creating an optimization algorithm to determine the
+factor, $\varphi$, by which female offtake rates need to be adjusted to
+prevent changes in the herd growth rate from one time step from the
+next. The goal is to achieve a steady state multiplication rate under
+stochastic changes in fertility and mortality.
 
-## Adjust offtake function
+## Define objective function
 
-In this chunk, a function is defined that will take as input a `param`
-table from the list of params associated with the worst years for herd
-growth and return a value of $(\lambda - m)^2$, which should be close to
-0. This function will be used in the optimization routine in the
-subsequent chunk.
+We begin by defining the function `get.off.adjust.poff()`, which takes
+as input a `param` table and a value of $\varphi$ and returns the
+squared difference between the projected multiplication rate, $\lambda$,
+and the target multiplication rate, $m$ (set to 1 for stable population
+growth).
 
 ``` r
 #-- function to adjust offtake based on poff in param table
@@ -1002,9 +1016,9 @@ get.off.adjust.poff = function( phi, param.ref, m = 1 ){
 
 ## Optimize
 
-In this chunk, the function defined above is optimized to find
-$\varphi_{opt}$, which is the value that will be used to adjust female
-offtake in a new projection.
+In this chunk, the function `stats::optimize()` uses the adjustment
+function defined above to find $\varphi_{opt}$, the value that will be
+used to adjust female offtake rates in a new projection.
 
 ``` r
 #-- optimize to find the value that minimizes (lambda-m)^2 (i.e., difference between projected herd growth rate and objective growth)
@@ -1012,10 +1026,10 @@ offtake in a new projection.
 optimize(f=get.off.adjust.poff, param.ref = listpar$goat.Energy[[1]], interval = c(0,5))$minimum
 ```
 
-    ## [1] 0.6648578
+    ## [1] 0.4787065
 
 ``` r
-#-- optimize for all
+#-- optimize for all years in the Energy strategy for goats, as an example.
 optimize.res = lapply( listpar$goat.Energy, function( b ){
   optimize( f = get.off.adjust.poff, param.ref = b, interval = c(0,5))$minimum
   })
@@ -1025,30 +1039,26 @@ optimize.res[1:5]
 ```
 
     ## [[1]]
-    ## [1] 0.6648578
+    ## [1] 0.4787065
     ## 
     ## [[2]]
-    ## [1] 0.4286676
+    ## [1] 0.3442743
     ## 
     ## [[3]]
     ## [1] 7.802868e-05
     ## 
     ## [[4]]
-    ## [1] 0.332951
+    ## [1] 0.5944769
     ## 
     ## [[5]]
     ## [1] 7.802868e-05
 
-Now that the optimization procedure has been demonstrated for one set of
-parameters, a function is defined that will adjust offtake rates by
-$\varphi_{opt}$ when \$\< \$ `low.threshold` or \$\$ `high.threshold`.
-
 ### Dynamic optimization function
 
-Here a function is defined that will multiply female offtake
-probabilities by $\varphi_{opt}$ if $\lambda$ falls outside of the
-defined thresholds. This will run inside of the project herd wrapper
-function and return a new `param` table for every cycle
+Now that the optimization algorithm has been demonstrated for one set of
+parameters, a wrapper function is defined that will dynamically adjust
+offtake rates by $\varphi_{opt}$ when $\lambda <$ `low.threshold` or
+$\lambda \ge$ `high.threshold`.
 
 ``` r
 #-- function for adjusting p. female offtake
@@ -1079,16 +1089,18 @@ adjust.offtake = function( in.param, low.threshold, high.threshold, p0 = 150 ){
 }
 ```
 
-### Reproject herd with optimal offtake adjustments
+## Reproject herd with optimal offtake adjustments
 
-Now the simulation is run after setting the upper and lower thresholds
-as the 25% and 75% quantiles of $\lambda_{boot}$ stored in in
-`repro.boot.df`.
+Now we obtain the upper and lower thresholds of growth rate (the 25% and
+75% quantiles of $\lambda_{boot}$) from `lambda.list`.
 
-Based on $\lambda_{boot}$ estimates, the optimization function will
-adjust offtake if $\lambda$ is below 0.948 or above 1.016. After
-optimizing, the original projection results are combined with the new
-results and can be plotted.
+We now run the `adjust.offtake` optimization algorithm for the 200
+timesteps and project herds using the adjusted culling rates. This
+produces a new `param` tables for every cycle. Based on $\lambda_{boot}$
+estimates, the optimization function will adjust offtake if $\lambda$ is
+below 0.948 or above 1.016. The resulting culling rates are passed to
+`projectHerd2()`. We then gather the results as before and merge them
+with the new results so they can be compared.
 
 ``` r
 #-- reproject with optimization
@@ -1102,8 +1114,8 @@ new.results = lapply( listpar, function( l ) {
 
 #-- send results to df
 new.tot.pop.res = lapply(new.results, function(r){pop_summary2(r, sex = FALSE, interval = "year")})
-# new.tot.pop.res = lapply(new.results, function(r){HerdDynamics::pop_summary(r, interval = "year")})
-# res2df(new.tot.pop.res) #-- this function is in the HerdDynamics package
+
+# res2df(new.tot.pop.res) # this function is in the HerdDynamics package
 new.pop.res.df = res.to.df(new.tot.pop.res)
 
 #-- create column for offtake adjustment 
@@ -1114,46 +1126,28 @@ new.pop.res.df$offtake = "adjusted"
 all.res.df = rbind.data.frame(tot.pop.df, new.pop.res.df)
 ```
 
-![Figure C.5. Projected sheep and goat populations after applying
-optimized offtake procedure for the Energy and Benkovac-Barice
-strategies.](README_files/figure-gfm/plot-optimized-results-1.png)![Figure
-C.5. Projected sheep and goat populations after applying optimized
-offtake procedure for the Energy and Benkovac-Barice
-strategies.](README_files/figure-gfm/plot-optimized-results-2.png)
+<figure>
+<img src="README_files/figure-gfm/plot-optimized-results-1.png"
+alt="Figure S3.8. Projected sheep and goat populations after applying optimized offtake procedure for the Milk A and Benkovac-Barice strategies." />
+<figcaption aria-hidden="true">Figure S3.8. Projected sheep and goat
+populations after applying optimized offtake procedure for the Milk A
+and Benkovac-Barice strategies.</figcaption>
+</figure>
 
 # Part V - Evaluate optimization results
 
-This chunk uses a modified version of `mmage::fprod()` function from the
-`mmage` package ([Lesnoff 2024b](#ref-mmage)) to calculate mean herd
-size as shown in Figure 9.
+## Mean herd size
 
-``` r
-source("./R/mmagefprod.R")
-new.vprod = do.call(rbind.data.frame, lapply(new.results, function(l){ fprod(formula = ~ 1, l$vecprod)  }))
-new.vprod$Taxon = str_split_i(rownames(new.vprod), "\\.", i = 1)
-new.vprod$strategy = str_split_i(rownames(new.vprod), "\\.", i = 2)
-new.vprod = new.vprod %>%
-  mutate(
-    strategy = factor( strategy, 
-      levels = rev(names(offtake.mortality)),
-      labels = rev(c(
-        names(offtake.mortality)[1:5], 
-        "Meat A", "Meat B", "Milk A", "Milk B", 
-        names(offtake.mortality)[10:16])
-        )),
-    Taxon = factor(Taxon, levels = c( "goat", "sheep")))
-```
+Using a modified version of `mmage::fprod()` we can view the mean herd
+size for projections with optimized culling rates. ![Figure S3.10. Mean
+herd size after optimized culling rates
+applied](README_files/figure-gfm/xmean-1.png)
 
-<figure>
-<img src="README_files/figure-gfm/xmean-1.png"
-alt="Figure 9. Mean herd size after optimized culling rates applied" />
-<figcaption aria-hidden="true">Figure 9. Mean herd size after optimized
-culling rates applied</figcaption>
-</figure>
+## Multiplication rates
 
-This chunk uses a modified version of the `fm()` function in the `mmage`
-package to obtain the annual multiplication rates of the optimized
-offtake (adjusted) and unadjusted simulations.
+This chunk uses a modified version of `mmage::fm()` to obtain the annual
+multiplication rates of the optimized offtake (adjusted) and unadjusted
+simulations.
 
 ``` r
 #-- modified mmage function to get multiplication rate of the herd
@@ -1181,11 +1175,11 @@ all.m.df = rbind.data.frame(m.df, new.m.df)
 10-year moving averages of the multiplication rates were calculated to
 simplify illustration. This chunk defines functions to calculate the
 moving averages and detect detect maximum and minimum multiplication
-rates. These functions are used to produce Figures 5.7 and 5.8 in
-Chapter 5.
+rates. These functions are used to produce Figures 9 and 10 in the
+associated article.
 
 ``` r
-# Function to calculate moving average
+#-- Function to calculate moving average
 calculate_moving_average <- function(time_series, window_size, type = c("simple", "exponential"), alpha = 0.1) {
   type <- match.arg(type)
   
@@ -1204,8 +1198,7 @@ calculate_moving_average <- function(time_series, window_size, type = c("simple"
   return(moving_average)
 }
 
-
-# Function to detect peaks
+#-- Function to detect peaks
 detect_peaks <- function(x, span = 3) {
   z <- embed(x, span)
   s <- span %/% 2
@@ -1213,7 +1206,7 @@ detect_peaks <- function(x, span = 3) {
   c(rep(FALSE, s), v, rep(FALSE, s))
 }
 
-# Function to detect valleys
+#-- Function to detect valleys
 detect_valleys <- function(x, span = 3) {
   z <- embed(x, span)
   s <- span %/% 2
@@ -1222,36 +1215,25 @@ detect_valleys <- function(x, span = 3) {
 }
 ```
 
+<figure>
+<img src="README_files/figure-gfm/Fig11-1.png"
+alt="Figure S3.11. Showing multiplication rates of unadjusted and adjusted offtake rates for goats" />
+<figcaption aria-hidden="true">Figure S3.11. Showing multiplication
+rates of unadjusted and adjusted offtake rates for goats</figcaption>
+</figure>
+
+<figure>
+<img src="README_files/figure-gfm/Fig12-1.png"
+alt="Figure S3.12. Showing multiplication rates of unadjusted and adjusted offtake rates for sheep" />
+<figcaption aria-hidden="true">Figure S3.12. Showing multiplication
+rates of unadjusted and adjusted offtake rates for sheep</figcaption>
+</figure>
+
 ### Levene’s Test for Equality of Variance
 
-This section performs a Levene’s Test for Equality of variances between
-the herd multiplication rate after offtake was optimized and the
-predicted $\lambda$ value (i.e., unadjusted rates).
-
-``` r
-all.m.list = all.m.df %>% 
-  mutate(strategy = factor(strategy, levels = names(offtake.mortality),
-                           labels = c(names(offtake.mortality)[1:5], "Meat A", "Meat B", "Milk A", "Milk B",
-                                      names(offtake.mortality)[10:16]))) %>% 
-  group_by(strategy, Taxon) %>% 
-  group_split()
-
-m.lev.res = lapply(all.m.list, function(l){
-  lev.res = l %>% with(car::leveneTest(m, offtake))
-  data.frame(strategy = first(l$strategy), Taxon = first(l$Taxon), F.value = lev.res$`F value`[1], p = lev.res$`Pr(>F)`[1])
-})
-
-lev.res.df = do.call(rbind.data.frame, m.lev.res)
-head(lev.res.df)
-```
-
-    ##   strategy Taxon   F.value           p
-    ## 1   Energy  goat  5.127998 0.024080117
-    ## 2   Energy sheep  6.287879 0.012553969
-    ## 3 Security  goat  5.501712 0.019488071
-    ## 4 Security sheep  9.022214 0.002835679
-    ## 5     Meat  goat  4.640999 0.031816422
-    ## 6     Meat sheep 10.979832 0.001005430
+A Levene’s Test for Equality of variances is used to assess whether
+there was a change in interannual variance of herd growth rates before
+and after culling rates were optimized.
 
 # References
 

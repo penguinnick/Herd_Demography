@@ -22,6 +22,7 @@ devtools::install_github("penguinnick/HerdDynamics")
 library(HerdDynamics)
 library(dplyr)
 library(tidyr)
+library(purrr)
 library(boot)
 library(flextable)
 library(stringr)
@@ -49,7 +50,7 @@ The `HerdDynamics` package is designed to be used with the `mmage` package, whic
 
 # Part I - Setup - Population Projection Matrix
 
-Here, a Lefkovitch population projection model [@Lefkovitch1965] is used to project sheep and goat herd population dynamics. The probability of survival and fecundity are influenced by the competing risks of intrinsic mortality and offtake (i.e., slaugther). The transition matrix is created using published data on fecundity, intrinsic mortality, and offtake rates which are derived from theoretical culling profiles in archaeological literature (See Chapter Four). 
+Here, a Lefkovitch population projection model [@Lefkovitch1965] is used to project sheep and goat herd population dynamics. The probability of survival and fecundity are influenced by the competing risks of intrinsic mortality and offtake (i.e., slaugther). The transition matrix is created using published data on fecundity, intrinsic mortality , and offtake rates which are derived from theoretical culling profiles in archaeological literature (See Supplementary Information 2). 
 
 ### Age Classes
 
@@ -60,7 +61,7 @@ The age classes according to Payne [-@Payne1973] are included in  `HerdDynamics`
 HerdDynamics::Payne_ages
 ```
 ### Transition Class Table (tcla)
-Once the age classes are set, the wrapper function `build_tcla()` from `HerdDynamics` uses the `mmage::fclass` function to create the data.frame `tcla`. Parameter `nbphase` sets the timestep interval, which should be either annually (12) or monthly (1). `tcla` table includes for each age group, the length of each group (i.e., 2 months, 4 months, 6 months, 12 months, etc.), and the minimum and maximum ages of the group. This procedure is streamlined by the customized `build_tcla` function which is designed to adjust the values provided as input (lclass) according to `nbphase`, and recognize whether `lclass` is formatted for a "truncated" or "untruncated" model. We use the `lclass` variable in the `Payne_ages` table provided by `HerdDynamics`, which has already been set up to track age in months. So we can set `nbphase` to 1.
+Once the age classes are set, the wrapper function `build_tcla()` from `HerdDynamics` uses the `mmage::fclass` function to create the data.frame `tcla`. Parameter `nbphase` sets the timestep interval, which should be either annually (12) or monthly (1). The `tcla` data.frame consists of the length of each group (i.e., 2 months, 4 months, 6 months, 12 months, etc.) and the minimum and maximum ages of the group for males and females. This procedure is streamlined by the customized `build_tcla` function which is designed to adjust the values provided as input (lclass) according to `nbphase`, and recognize whether `lclass` is formatted for a "truncated" or "untruncated" model. We use the `lclass` variable in the `Payne_ages` table provided by `HerdDynamics`, which has already been set up to track age in months. So we can set `nbphase` to 1.
 
 ```{r, tcla}
 #-- Build tcla table using HerdDynamics::build_tcla() 
@@ -78,7 +79,7 @@ Calling `HerdDynamics::offtake_models` gives a list of survivorship probabilitie
 HerdDynamics::culling_multiplot(HerdDynamics::offtake_models)
 ```
 
-```{r, theoretical-survivorship-table,  include=FALSE} 
+```{r, theoretical-survivorship-table, echo=FALSE, include=FALSE} 
 #, include=FALSE, eval=TRUE, results="hide"}
 T2 = cbind.data.frame(c("", Payne_ages$ageClasses) , do.call( cbind.data.frame, args = c( offtake_models) ) )
 colnames(T2)[1] = "Age Class" # = ageClasses # c(0, ages)
@@ -126,7 +127,7 @@ sect_properties <- prop_section(
 getwd()
 
 #-- create output word doc
-# save_as_docx(T2ft, path = "tables/Table2_survival_rates.docx", pr_section = sect_properties)
+save_as_docx(T2ft, path = "tables/Table2_survival_rates.docx", pr_section = sect_properties)
 # T2ft  
 # rm(T2, T2ft)
 ```
@@ -266,7 +267,7 @@ where `hpar` is the number of parturitions expected per female-time unit.
 
 ```{r, fertility-mortality-data, echo=FALSE}
 #-- read in parameters file for mortality, prolificacy, and parturition rates
-param.dat = read.csv("data/parameters.csv")
+param.dat = read.csv("data/parameters2.csv")
 ```
 
 Using the mortality and prolificacy data called in the previous chunk two lists are created (one for goats, one for sheep) containing the fertility and mortality parameters used to compute **lambda** ($\lambda$), reproductive values, and project herd growth. The function `generate_prolificacy_rates()` is used to vary inter-annual fertility values. This function and `generate_infant_mortality_rates` are included in HerdDynamics package.
@@ -532,12 +533,12 @@ save(listpar, file = "data/listpar.RData")
 load(file = "data/listpar.RData")
 ```
 
-### Basic Herd structure and growth
+## Basic Herd structure and growth
 With the fertility and mortality rates have been established the next step is to extract the structure of the herd, lambda, and the proportion of male to females for each model. To do this, an initial herd size, `p0` is set to `150`. In the following chunk, these traits are calculated for comparison of the impacts of culling strategies on herd demography. 
 
 While lambda can be computed from a single `param` table, the herd multiplication rate will change from one time-step to the next as fertility and mortality rates change. To estimate lambda given this variation a bootstrapping procedure is used. 
 
-Using the list of mortality and fertility parameters created in the previous chunk, the custom function `getLambda()` is run using `lapply` to obtain lambda, sex proportion, and number of individuals in each age class for the initial population. This function is a wrapper function that uses functions in the `mmage` package to obtain the dominant eigenvalue (lambda) to get the multiplication rate for the population.
+Using the list of mortality and fertility parameters created in the previous chunk, the custom function `getLambda()` is run using `lapply` to obtain lambda, sex proportion, and number of individuals in each age class for the initial population. This function is a wrapper function that uses functions in the `mmage` package to obtain the dominant eigenvalue $/lambda$  to get the multiplication rate for the population.
 
 With the environment simulated as `listpar`, the chunk below calculates lambda and proportion of females for each year under each offtake strategy.
 ```{r, Lambda-sex-proportion, cache=TRUE, echo=TRUE}
@@ -571,7 +572,7 @@ lambda.list = unlist(lambda.list, recursive = F)
 sex.prop.list = unlist(sex.prop.list, recursive = F)
 ```
 
-## Bootstrap lambda and sex proportions
+### Bootstrap lambda and sex proportions
 
 This chunk defines the function used in the bootstrap estimation of mean $\lambda$ ($\lambda_{boot}$)  and proportion of females. The bootstrap is replicated 1000 times. The output is `repro.boot.df`.
 
@@ -629,7 +630,7 @@ repro.boot.df = cbind.data.frame(
       up.sex.F = up
       )
   )
-
+#-- view first six rows of results
 head(repro.boot.df[, 1:6])
 ```
 
@@ -738,7 +739,7 @@ t5
 $\lambda_{boot}$ and proportion of females in the herd are negatively correlated.  
 ```{r, Lambda-Female-corr, echo=FALSE, eval=TRUE}
 #-- check correlation between lambda and sex proportions
-repro.boot.df %>% filter(strategy!="Baseline") %>% with(cor.test( Lambda, `Proportion Female` ))
+repro.boot.df %>% filter(strategy!="Baseline") %>% with(cor.test( Lambda, `Proportion Female`, method = "pearson"))
 
 ```
 
@@ -766,24 +767,12 @@ strip.labeller = lambda.boot.df %>%
       )) %>%
   select(strategy, lambda.lab)
 
-#-- create labels
-# strip.labs = as.list(strip.labeller$lambda.lab)
-# names(strip.labs) = strip.labeller$strategy
-
+#-- create labeller
 strip_labels = setNames( c(strip.labeller$lambda.lab), c(strip.labeller$strategy))
-# #-- labeller function
-# strip_labeller <- function(variable, value){
-#   return(strip.labs[value])
-# }
-# 
-# strip_labeller <- function(labels){
-#   strip.labeller$lambda.lab
-# } 
-
 ```
 
 
-```{r, plot-sex-proportion, include=FALSE }
+```{r, plot-sex-proportion, echo=FALSE, fig.dim=c(6 , 4), fig.cap="Figure S3.4. Proportion of females and males for each strategy"  }
 #-- This chunk creates a plot showing the proportion of females and males in the herd based on the bootstrapped estimates of sex proportions.
 repro.boot.df %>% 
   select(Taxon, strategy, Lambda, `Proportion Female`, `Proportion Male`) %>%
@@ -806,14 +795,13 @@ repro.boot.df %>%
   scale_fill_manual( values = cbPalette ) +
   theme_minimal()  +
   facet_wrap( ~ strategy , labeller = as_labeller(strip_labels))
-
 ```
 
 ## Herd Structure
 This chunk calculates herd structure which is used to produce Figure 4.
 ```{r, herd-structure}
 #-- set initial population size
-p0 = 150
+p0 = p0
 
 #-- call function getLambda to extract reproduction traits
 repro = lapply(listpar, function(l){
@@ -830,10 +818,10 @@ xini.to.data.frame = function( repro, ageClasses, ages ) {
     lapply( r, function( x ) {
       with(x, {
         # summarize initial herds (total males and females for each age class)
-        xini = initial.herd %>%    
-          group_by( class ) %>% 
+        xini = initial.herd %>%
+          group_by( class ) %>%
           reframe( n = as.integer( sum( xini ) ) )
-        }) 
+        })
       })
     })
   xini.list = unlist( xini.list, recursive = F ) # unlist species groupings
@@ -860,10 +848,9 @@ xini.df = xini.to.data.frame(repro, ageClasses = ageClasses, ages = ages)
 head(xini.df)
 ```
 
-
-```{r Figure4, echo=-3, fig.dim=c(6,4), include=FALSE, eval=FALSE}
-#-- This chunk creates Figure 4, showing herd structure for each strategy
-#-- Now that the herd structure is created, the next chunk plots herd structure for each strategy.
+Plot herd structure for each culling strategy showing number of animals in each age class for goats and sheep.
+```{r Figure4, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure S3.5. Herd structure for each culling strategy showing number of animals in each age class for goats and sheep." }
+#-- This chunk creates Figure 4 in the article, showing herd structure for each strategy
 Fig4 = xini.df %>% filter( n > 0 ) %>%
   ggplot() +
   # geom_col( aes( x = AgeClass, y = n, fill = Taxon ), position = "dodge" ) +
@@ -888,28 +875,30 @@ ggsave("Figures/Fig4_herd_structure.jpg", Fig4, width = 6, height = 4)
 
 # Part III - Population Projection
 
-The next step is to simulate herd demographic change through time given the parameters defined above and the reproductive traits calculated for each model and culling profile. The initial herd size was established already as `p0` and the simulated environment as `listpar`. The number of times-teps is equal to the length of `listpar`. 
+The next step is to simulate herd demographic change through time given the parameters defined above and the reproductive traits calculated for each model and culling profile. The initial herd size of 150 was established already as `p0` and the simulated environment as `listpar`. The number of timesteps is equal to the length of `listpar`. 
 
-The projection is run using the script "projectHerd2.R". This function takes fewer inputs than the `projectHerd()` function.  First, `listpar` is created using the makeListpar.R function. This function simulates environmental variation of one herd under inter-annual variation in mortality and fertility. One herd, multiple offtake strategies can be assessed this way. Results are in the same format as projectHerd.R. This function is a wrapper function that streamlines the herd projection procedure described in the mmage documentation [@mmage] but is used when the environment is predefined. The alternative function `projectHerd` has additional functionality such as varying environments from one step to the next. This is useful when there is only one `param` table but environmental variation is generated for each time-step. This process is explained in another document. 
+The projection is run using the function `projectHerd2()`, which is a wrapper function that streamlines the herd projection procedure described in the mmage documentation [@mmage] but is used when the environment is predefined. The alternative is  `HerdDynamics::projectHerd()` is useful when there is only one `param` table but environmental variation is generated for each time-step (See HerdDynamics documentation). 
 
-The output of the projection is saves as `results`. When the projection is run for every strategy using the mortality and fertility rates for each taxon using `lapply`, the output is a list of length n.strategies * n.taxa. 
+The projection is run for every strategy using the mortality and fertility rates for each taxon using `lapply`, the output is `results`, a list of length n.strategies * n.taxa.
 
 ```{r, project-herd, echo=TRUE}
 #-- load projectHerd function
 source("./R/projectHerd2.R")
 
+#-- project herd for each strategy
 listpar = unlist(listpar, recursive = F)
 results = lapply(listpar, function(l) { projectHerd2( listpar = l, p0 = p0) } )
-# results = lapply(listpar, function(l) { project_herd( listpar = l, p0 = p0) } )
 ```
 
 ## Output Metrics
 
-Here summary statistics of interest are calculated to compare how the different models perform (i.e., values that will be used to compare differences in herd size, etc.).
+Here we gather the results into a data.frame to produce plots and compare how the different models perform (i.e., values that will be used to compare differences in herd size, etc.).
 
-First, a wrapper function is defined as `pop.summary`, which takes the results list (`results`) and creates a list of data.frames each containing two columns: the time step (`time`) and the number of animals in the herd (`pop`). Then another wrapper function, `res.to.df` is used to create a single data.frame of all results which is used for plotting.
+First, a wrapper function is defined as `pop.summary2()`, which takes and creates a list of data.frames from `results`, each containing two columns: `time` and `pop`(ulation). `pop.summary2()` has the option of tracking population by sex.  
 
-```{r, summarize-Total-Pop-Outputs, echo=TRUE}
+A second wrapper function, `res.to.df()` is defined to combine the list into a single data.frame which we use for plotting.
+
+```{r, helper functions to summarize-Total-Pop-Outputs, echo=TRUE}
 #-- function to summarize dynamics of the total population through time
 pop_summary2 = function(x, sex = FALSE, interval = "year"){
   vecx=x$vecx
@@ -934,10 +923,7 @@ pop_summary2 = function(x, sex = FALSE, interval = "year"){
   return(out)
 }
 
-tot.pop.res = lapply(results, function(r){pop_summary2(r, sex = FALSE, interval = "year")})
-# tot.pop.res.sex = lapply(results, function(r){pop.summary(r, sex = TRUE, interval = "year")})
-
-# function to gather results into a single dataframe
+#-- function to gather results into a single data.frame
 res.to.df = function(tot.pop.res){
   df = do.call(rbind.data.frame, args=c(tot.pop.res, make.row.names=FALSE))
   strats = names(tot.pop.res)
@@ -947,14 +933,24 @@ res.to.df = function(tot.pop.res){
   df$strategy = ts[, 2]
   return(df)
 }
+```
+
+Run helper functions to gather results into a single data.frame
+```{r, summarize-Total-Pop-Outputs, echo=TRUE}
+#-- summarize total population through time
+tot.pop.res = lapply(results, function(r){pop_summary2(r, sex = FALSE, interval = "year")})
 tot.pop.df = res.to.df(tot.pop.res)
+#-- uncomment to get results by sex
+# tot.pop.res.sex = lapply(results, function(r){pop.summary(r, sex = TRUE, interval = "year")})
 # tot.pop.df.sex = res.to.df(tot.pop.res.sex)
+
 head(tot.pop.df)
 # head(tot.pop.df.sex)
 ```
 
 
-```{r, Fig5, echo=FALSE, warning=FALSE, fig.dim=c(6,4), fig.cap="Figure. 5. Plots showing the change in sheep and goat herd sizes through time under the various survivorship profiles used. " }
+```{r, Fig6, echo=FALSE, warning=FALSE, fig.dim=c(6,4), fig.cap="Figure. S3.6. Plots showing the change in sheep and goat herd sizes through time under the various culling strategies used. " }
+
 #-- plot
 Fig5 = tot.pop.df %>% 
   mutate(Taxon = factor(Taxon, levels = c("goat", "sheep"))) %>%
@@ -978,9 +974,10 @@ ggsave( "Figures/Fig5_projections.jpg", plot =  Fig5 , width = 6, height = 4)
 
 ## Stochastic variation
 
-Since there is an element of stochastic variation, it is useful to examine multiple iterations of the simulation. Here `nbrep` is set as the number of simulations to replicate. A wrapper function is created, `stochastic.rep` which combines `make.listpar`, `projectHerd2`, and `pop.summary` functions. Then, the simulation is replicated `nbrep` times. Results are combined into a data.frame for plotting.
-```{r, replicate, cache=TRUE}
-set.seed(1056)
+Since there is an element of stochastic variation, it is useful to examine multiple iterations of the simulation. 
+
+To do this, we define a wrapper function, `stochastic.rep()` and use `replicate()` run the simulation 10 times. Results are combined into a `data.frame` for plotting using `matrix.to.df` and `list.to.mat`. 
+```{r, replicate helpers, echo=TRUE}
 #-- function to replicate
 stochastic.rep = function( p0, param.props, offtake.mortality, nbcycle ){
   #-- create new set of environmental parameters
@@ -995,7 +992,27 @@ stochastic.rep = function( p0, param.props, offtake.mortality, nbcycle ){
   pop_summary2(result, sex = FALSE, interval = "year")$pop
 }
 
-#-- set number
+#-- helper function to transform lists into matrix
+list.to.mat = function( l ){ 
+  n.col = length( l )
+  l.mat = matrix( unlist( l ), ncol = n.col)
+  rownames(l.mat) = unique(names(unlist(l)))
+  l.mat
+}
+
+#-- helper function to create df from matrix output of replicated stochastic.rep function
+matrix.to.df = function( mat ){
+  df = as.data.frame(mat)
+  df$time = as.numeric(str_replace_all(rownames(df), "[:alpha:]|[:punct:]", ""))
+  df$strategy = str_replace_all(rownames(df), "[:digit:]", "")
+  df %>% pivot_longer( cols = c(-time, -strategy) )
+}
+```
+
+Run replicated simulations
+```{r, run-replicates, echo=TRUE, cache=TRUE}
+#-- set seed, number of replicates and cycles
+set.seed(1056)
 nbrep = 10
 nbcycle = nbcycle
 
@@ -1009,22 +1026,6 @@ stochastic.sim.res = replicate(
     }), 
   simplify = "array"
   )
-
-#-- create df from matrix output of replicated stochastic.rep func
-matrix.to.df = function( mat ){
-  df = as.data.frame(mat)
-  df$time = as.numeric(str_replace_all(rownames(df), "[:alpha:]|[:punct:]", ""))
-  df$strategy = str_replace_all(rownames(df), "[:digit:]", "")
-  df %>% pivot_longer( cols = c(-time, -strategy) )
-}
-
-#-- function to transform lists into matrix
-list.to.mat = function( l ){ 
-  n.col = length( l )
-  l.mat = matrix( unlist( l ), ncol = n.col)
-  rownames(l.mat) = unique(names(unlist(l)))
-  l.mat
-}
 
 #-- create matrix, then df from results
 sto.res.mat = apply(stochastic.sim.res, 1, FUN = list.to.mat, simplify = F)
@@ -1040,8 +1041,8 @@ sto.res.df$strategy = factor(sto.res.df$strategy, levels = c(names(offtake.morta
 
 ```
 
-
-```{r Figure7, warning=FALSE, echo=FALSE, fig.dim=c(6,4), warning=FALSE,  fig.cap="Figure. 7. Plots showing results of replicated projections of change in sheep and goat herd sizes through time under the various survivorship profiles used." }
+Plot the results of the replicated stochastic simulations.
+```{r, Figure7, warning=FALSE, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure. S3.7. Plots showing results of replicated projections of change in sheep and goat herd sizes through time under the various survivorship profiles used." }
 #-- plot results
 Fig7 = sto.res.df %>%
   mutate(Taxon = taxon) %>%
@@ -1070,18 +1071,18 @@ Fig7 = sto.res.df %>%
         line = element_line(linewidth = 0.2))
 Fig7
 
-# ggsave( "Figures/Fig7_stochastic_rep.jpg", plot =  Fig7 , width = 6, height = 4)
+ggsave( "Figures/Fig6_stochastic_rep.jpg", plot =  Fig7 , width = 6, height = 4)
 
 rm(stochastic.sim.res, sto.res.mat)
 ```
 
-# Part IV - Optimizing offtake
-Modification of offtake rates may allow for herd size to remain stable. An optimization routine is needed to determine the factor, $\varphi$, by which female offtake needs to be adjusted to maintain herd size. The goal is to achieve a steady state multiplication rate under stochastic changes in fertility and mortality. The first step is to determine the multiplication rate of the herd from one timestep to the next. This is done using the modified `mmage::fm` function, `mmagefm()`. In this chunk, a dataframe, `lambda.df` is created by obtaining the multiplication rate from the results of the herd projection which used the `listpar` object that simulates inter-annual variation in fertility and mortality.
+# Part IV - Optimizing Culling Rates
+In this section we explore whether modifying culling rates can result in stable herd sizes. 
 
-After creating `lambda.df`, an index of the years with lowest lambda is created. This index will be used to determine `phi` ($\varphi$) in a later step. 
+We do this by creating an optimization algorithm to determine the factor, $\varphi$, by which female offtake rates need to be adjusted to prevent changes in the herd growth rate from one time step from the next. The goal is to achieve a steady state multiplication rate under stochastic changes in fertility and mortality. 
 
-## Adjust offtake function
-In this chunk, a function is defined that will take as input a `param` table from the list of params associated with the worst years for herd growth and return a value of $(\lambda - m)^2$, which should be close to 0. This function will be used in the optimization routine in the subsequent chunk.
+## Define objective function
+We begin by defining the function `get.off.adjust.poff()`, which takes as input a `param` table and a value of $\varphi$ and returns the squared difference between the projected multiplication rate, $\lambda$, and the target multiplication rate, $m$ (set to 1 for stable population growth).
 
 ```{r, direct-constraints, echo=TRUE}
 #-- function to adjust offtake based on poff in param table
@@ -1099,15 +1100,16 @@ get.off.adjust.poff = function( phi, param.ref, m = 1 ){
 
 ```
 
+
 ## Optimize
-In this chunk, the function defined above is optimized to find $\varphi_{opt}$, which is the value that will be used to adjust female offtake in a new projection.
+In this chunk, the function `stats::optimize()` uses the adjustment function defined above to find $\varphi_{opt}$, the value that will be used to adjust female offtake rates in a new projection.
 
 ```{r, optimize, echo=TRUE}
 #-- optimize to find the value that minimizes (lambda-m)^2 (i.e., difference between projected herd growth rate and objective growth)
 #-- an example of optimized phi
 optimize(f=get.off.adjust.poff, param.ref = listpar$goat.Energy[[1]], interval = c(0,5))$minimum
 
-#-- optimize for all
+#-- optimize for all years in the Energy strategy for goats, as an example.
 optimize.res = lapply( listpar$goat.Energy, function( b ){
   optimize( f = get.off.adjust.poff, param.ref = b, interval = c(0,5))$minimum
   })
@@ -1117,10 +1119,8 @@ optimize.res[1:5]
 
 ```
 
-Now that the optimization procedure has been demonstrated for one set of parameters, a function is defined that will adjust offtake rates by $\varphi_{opt}$ when $\lambda < $ `low.threshold` or $\lambda \ge $ `high.threshold`.
-
 ### Dynamic optimization function
-Here a function is defined that will multiply female offtake probabilities by $\varphi_{opt}$ if $\lambda$  falls outside of the defined thresholds. This will run inside of the project herd wrapper function and return a new `param` table for every cycle
+Now that the optimization algorithm has been demonstrated for one set of parameters, a wrapper function is defined that will dynamically adjust offtake rates by $\varphi_{opt}$ when $\lambda <$ `low.threshold` or $\lambda \ge$ `high.threshold`. 
 
 ```{r, adjust-offtake-fun, echo=TRUE}
 #-- function for adjusting p. female offtake
@@ -1152,8 +1152,8 @@ adjust.offtake = function( in.param, low.threshold, high.threshold, p0 = 150 ){
 
 ``` 
 
-### Reproject herd with optimal offtake adjustments
-Now the simulation is run after setting the upper and lower thresholds as the 25% and 75% quantiles of $\lambda_{boot}$ stored in in `repro.boot.df`.
+## Reproject herd with optimal offtake adjustments
+Now we obtain the upper and lower thresholds of growth rate (the 25% and 75% quantiles of $\lambda_{boot}$) from `lambda.list`.
 
 ```{r, set-lambda-threshold, echo=FALSE}
 #-- set threshold as mean of all lambda
@@ -1165,7 +1165,7 @@ Lambda.threshold.high = Lambda.threshold[[4]]
 
 ```
 
-Based on $\lambda_{boot}$ estimates, the optimization function will adjust offtake if $\lambda$ is below `r Lambda.threshold.low` or above `r Lambda.threshold.high`. After optimizing, the original projection results are combined with the new results and can be plotted.
+We now run the `adjust.offtake` optimization algorithm for the 200 timesteps and project herds using the adjusted culling rates. This produces  a new `param` tables for every cycle. Based on $\lambda_{boot}$ estimates, the optimization function will adjust offtake if $\lambda$ is below `r Lambda.threshold.low` or above `r Lambda.threshold.high`. The resulting culling rates are passed to `projectHerd2()`. We then gather the results as before and merge them with the new results so they can be compared.
 
 ```{r, reproject-optimization, cache=TRUE, echo=TRUE}
 #-- reproject with optimization
@@ -1179,8 +1179,8 @@ new.results = lapply( listpar, function( l ) {
 
 #-- send results to df
 new.tot.pop.res = lapply(new.results, function(r){pop_summary2(r, sex = FALSE, interval = "year")})
-# new.tot.pop.res = lapply(new.results, function(r){HerdDynamics::pop_summary(r, interval = "year")})
-# res2df(new.tot.pop.res) #-- this function is in the HerdDynamics package
+
+# res2df(new.tot.pop.res) # this function is in the HerdDynamics package
 new.pop.res.df = res.to.df(new.tot.pop.res)
 
 #-- create column for offtake adjustment 
@@ -1193,7 +1193,7 @@ all.res.df = rbind.data.frame(tot.pop.df, new.pop.res.df)
 ```
 
 
-```{r, plot-optimized-results, warning=FALSE, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure C.5. Projected sheep and goat populations after applying optimized offtake procedure for the Energy and Benkovac-Barice strategies."}
+```{r, plot-optimized-results, warning=FALSE, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure S3.8. Projected sheep and goat populations after applying optimized offtake procedure for the Milk A and Benkovac-Barice strategies."}
 plot.projection = function( df, offtake.list ){
   df %>% 
     mutate(
@@ -1212,17 +1212,17 @@ plot.projection = function( df, offtake.list ){
     theme_minimal()
 }
 
-#-- plot
+#-- plot for Energy and the Benkovac-Barice strategy
 plot.projection(new.pop.res.df %>% 
-                  filter(str_detect(strategy, "Benkovac-Barice|Energy")), 
-                offtake.list = offtake.mortality) #+ 
-  # theme(legend.position = "bottom")
-plot.projection(tot.pop.df, offtake.list = offtake.mortality)
+                  filter(str_detect(strategy, "Benkovac-Barice|MilkA")), 
+                offtake.list = offtake.mortality) +
+  theme(legend.position = "bottom")
+# plot.projection(tot.pop.df, offtake.list = offtake.mortality)
 ```
 
 
-```{r plot-reprojection, message=FALSE, include=FALSE, eval=FALSE, fig.dim=c(6,4)}
-#-- In this chunk the results of the simulations are plotted as Figure 6.
+```{r plot-reprojection, message=FALSE, include=FALSE, eval=TRUE, fig.dim=c(6,4), fig.cap="Figure S3.9. Plots showing results of projections after applying optimized offtake adjustments to the various survivorship profiles used." }
+
 #-- plot
 Fig8 = all.res.df %>% 
   group_by(time, strategy, offtake) %>%
@@ -1246,15 +1246,15 @@ Fig8 = all.res.df %>%
   facet_wrap( ~ strategy , scales = "free_y", labeller = as_labeller(strip_labels))
 
 Fig8
-ggsave( "Figures/Fig8_reprojections.jpg", plot =  Fig8 , width = 6, height = 4)
+ggsave( "Figures/Fig7_reprojections.jpg", plot =  Fig8 , width = 6, height = 4)
 
 
 ```
 
 # Part V - Evaluate optimization results
-
-This chunk uses a modified version of `mmage::fprod()` function from the `mmage` package [@mmage] to calculate mean herd size as shown in Figure 9.
-```{r, xmean, echo=-c(7:10), fig.dim=c(6,4), fig.cap="Figure 9. Mean herd size after optimized culling rates applied"}
+## Mean herd size
+Using a modified version of `mmage::fprod()` we can view the mean herd size for projections with optimized culling rates.
+```{r, xmean, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure S3.10. Mean herd size after optimized culling rates applied"}
 source("./R/mmagefprod.R")
 new.vprod = do.call(rbind.data.frame, lapply(new.results, function(l){ fprod(formula = ~ 1, l$vecprod)  }))
 new.vprod$Taxon = str_split_i(rownames(new.vprod), "\\.", i = 1)
@@ -1285,12 +1285,13 @@ Fig9 =  new.vprod %>%
   theme(legend.position = "bottom")
 
 Fig9
-# ggsave( "Figures/Fig9_mean_herd_size.jpg", plot =  Fig7 , width = 6, height = 4)
+ggsave( "Figures/Fig8_mean_herd_size.jpg", plot =  Fig9 , width = 6, height = 4)
 
 ```
 
+## Multiplication rates
 
-This chunk uses a modified version of the `fm()` function in the `mmage` package to obtain the annual multiplication rates of the optimized offtake (adjusted) and unadjusted simulations. 
+This chunk uses a modified version of `mmage::fm()` to obtain the annual multiplication rates of the optimized offtake (adjusted) and unadjusted simulations. 
 
 ```{r, compare-lambda, echo=TRUE}
 #-- modified mmage function to get multiplication rate of the herd
@@ -1316,9 +1317,9 @@ all.m.df = rbind.data.frame(m.df, new.m.df)
 ```
 
 
-10-year moving averages of the multiplication rates were calculated to simplify illustration. This chunk defines functions to calculate the moving averages and detect detect maximum and minimum multiplication rates. These functions are used to produce Figures 5.7 and 5.8 in Chapter 5. 
+10-year moving averages of the multiplication rates were calculated to simplify illustration. This chunk defines functions to calculate the moving averages and detect detect maximum and minimum multiplication rates. These functions are used to produce Figures 9 and 10 in the associated article. 
 ```{r, summary-funs, echo=TRUE}
-# Function to calculate moving average
+#-- Function to calculate moving average
 calculate_moving_average <- function(time_series, window_size, type = c("simple", "exponential"), alpha = 0.1) {
   type <- match.arg(type)
   
@@ -1337,8 +1338,7 @@ calculate_moving_average <- function(time_series, window_size, type = c("simple"
   return(moving_average)
 }
 
-
-# Function to detect peaks
+#-- Function to detect peaks
 detect_peaks <- function(x, span = 3) {
   z <- embed(x, span)
   s <- span %/% 2
@@ -1346,7 +1346,7 @@ detect_peaks <- function(x, span = 3) {
   c(rep(FALSE, s), v, rep(FALSE, s))
 }
 
-# Function to detect valleys
+#-- Function to detect valleys
 detect_valleys <- function(x, span = 3) {
   z <- embed(x, span)
   s <- span %/% 2
@@ -1374,13 +1374,14 @@ sheep.labeller = lambda.boot.df %>%
   mutate(lambda.lab = paste0(strat.lab, "\n (", format(lambda, nsmall=3), ")")) %>%
   select(strategy, lambda.lab)
 
+sheep_labels = setNames( c(sheep.labeller$lambda.lab), c(sheep.labeller$strategy))
 #-- create label lists
-sheep.labs = as.list(sheep.labeller$lambda.lab)
-names(sheep.labs) = sheep.labeller$strategy
+# sheep.labs = as.list(sheep.labeller$lambda.lab)
+# names(sheep.labs) = sheep.labeller$strategy
 #-- labeller function
-sheep_labeller <- function(var, val){
-  return(sheep.labs[val])
-}
+# sheep_labeller <- function(var, val){
+#   return(sheep.labs[val])
+# }
 
 goat.labeller = lambda.boot.df %>% 
   mutate( taxon = str_split_i(rownames(lambda.boot.df), "\\.", 1 ),
@@ -1398,12 +1399,13 @@ goat.labeller = lambda.boot.df %>%
   select(strategy, lambda.lab)
 
 #-- create label lists
-goat.labs = as.list(goat.labeller$lambda.lab)
-names(goat.labs) = goat.labeller$strategy
+goat_labels = setNames( c(goat.labeller$lambda.lab), c(goat.labeller$strategy))
+# goat.labs = as.list(goat.labeller$lambda.lab)
+# names(goat.labs) = goat.labeller$strategy
 #-- labeller function
-goat_labeller <- function(var, val){
-  return(goat.labs[val])
-}
+# goat_labeller <- function(var, val){
+#   return(goat.labs[val])
+# }
 
 plot.m = function( taxon = c("goat", "sheep")){
   tax = match.arg(taxon)
@@ -1460,29 +1462,32 @@ plot.m = function( taxon = c("goat", "sheep")){
           axis.title = element_text( size = 10),
           line = element_line(linewidth = 0.2)) +
     if(tax == "goat"){
-      facet_wrap( ~ strategy , scales = "free_y", labeller = goat_labeller )
+      facet_wrap( ~ strategy , scales = "free_y", labeller = as_labeller(goat_labels) ) # goat_labeller )
     } else {
-      facet_wrap( ~ strategy , scales = "free_y", labeller = sheep_labeller )
+      facet_wrap( ~ strategy , scales = "free_y", labeller = as_labeller(sheep_labels)) #  sheep_labeller )
     }
 }
 
 ```
 
+```{r, Fig11, warning=FALSE, echo=FALSE, eval=TRUE,  fig.dim=c(6,4), fig.cap="Figure S3.11. Showing multiplication rates of unadjusted and adjusted offtake rates for goats"}
+plot.m("goat")
+```
 
-```{r, Figs8-and-9, warning=FALSE, include=FALSE,  fig.dim=c(6,4), fig.cap="Figure C.7. Showing multiplication rates of unadjusted and adjusted offtake rates for sheep"}
+```{r, Fig12, warning=FALSE, echo=FALSE, eval=TRUE,  fig.dim=c(6,4), fig.cap="Figure S3.12. Showing multiplication rates of unadjusted and adjusted offtake rates for sheep"}
 plot.m("sheep")
 ```
 
 ```{r, save-figs, include=FALSE, eval=FALSE}
 # Fig8
-ggsave( "Figures/Fig10_Lambda_goat.jpg", plot =  plot.m("goat") , width = 6, height = 4)
+ggsave( "Figures/Fig9_Lambda_goat.jpg", plot =  plot.m("goat") , width = 6, height = 4)
 # Fig9
-ggsave( "Figures/Fig11_Lambda_sheep.jpg", plot =  plot.m("sheep") , width = 6, height = 4)
+ggsave( "Figures/Fig10_Lambda_sheep.jpg", plot =  plot.m("sheep") , width = 6, height = 4)
 ```
 
 ### Levene's Test for Equality of Variance
-This section performs a Levene's Test for Equality of variances between the herd multiplication rate after offtake was optimized and the predicted $\lambda$ value (i.e., unadjusted rates).
-```{r, Levenes-Test, echo=TRUE, warning=FALSE}
+A Levene's Test for Equality of variances is used to assess whether there was a change in interannual variance of herd growth rates before and after culling rates were optimized.
+```{r, Levenes-Test, include = FALSE, warning=FALSE}
 
 all.m.list = all.m.df %>% 
   mutate(strategy = factor(strategy, levels = names(offtake.mortality),
@@ -1500,7 +1505,7 @@ lev.res.df = do.call(rbind.data.frame, m.lev.res)
 head(lev.res.df)
 ```
 
-```{r, Levenes-TableC5, include=FALSE}
+```{r, Levenes-TableC5, include=FALSE, eval=TRUE}
 
 T5ft = lev.res.df %>%
   pivot_longer(cols = c("F.value", "p")) %>%
@@ -1535,7 +1540,7 @@ sect_properties <- prop_section(
 )
 T5ft
 #-- create output word doc
-# save_as_docx(T5ft, path = "../../tables/Table5_Variance.docx", pr_section = sect_properties)
+save_as_docx(T5ft, path = "./tables/Table6_Variance.docx", pr_section = sect_properties)
 
 ```
 
