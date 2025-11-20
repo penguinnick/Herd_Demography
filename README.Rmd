@@ -47,7 +47,7 @@ The population projection model presented here uses the [HerdDynamics](https://g
 
 The `HerdDynamics` package is designed to be used with the `mmage` package, which is a powerful tool for analyzing age-structured populations. The `HerdDynamics` package provides additional functionality for simulating herd dynamics and optimizing culling strategies.
 
-## Setup - Population Projection Matrix
+# Part I - Setup - Population Projection Matrix
 
 Here, a Lefkovitch population projection model [@Lefkovitch1965] is used to project sheep and goat herd population dynamics. The probability of survival and fecundity are influenced by the competing risks of intrinsic mortality and offtake (i.e., slaugther). The transition matrix is created using published data on fecundity, intrinsic mortality, and offtake rates which are derived from theoretical culling profiles in archaeological literature (See Chapter Four). 
 
@@ -74,11 +74,12 @@ tcla
 
 Calling `HerdDynamics::offtake_models` gives a list of survivorship probabilities standardized across nine age classes by Marom and Bar-Oz [-@Marom2009] for Redding's [-@Redding1981] **Energy** and **Security**,  Payne's [-@Payne1973] **Meat**, **Milk**, and **Wool** strategies, and Vigne and Helmer's [-@Vigne2007] Meat and Milk types A and B (**MeatA**, **MeatB**, **MilkA**, **MilkB**) and **Fleece** strategies.
 
-```{r, theoretical-offtake-models, include=TRUE}
+```{r, theoretical-offtake-models, include=TRUE, eval=TRUE, fig.dim=c(6 , 4), fig.cap="Figure S3.1. Survivorship curves for threoretical culling strategies."}
 HerdDynamics::culling_multiplot(HerdDynamics::offtake_models)
 ```
 
-```{r, theoretical-survivorship-table, echo=FALSE, include=FALSE, eval=TRUE, results="hide"}
+```{r, theoretical-survivorship-table,  include=FALSE} 
+#, include=FALSE, eval=TRUE, results="hide"}
 T2 = cbind.data.frame(c("", Payne_ages$ageClasses) , do.call( cbind.data.frame, args = c( offtake_models) ) )
 colnames(T2)[1] = "Age Class" # = ageClasses # c(0, ages)
 
@@ -109,7 +110,7 @@ T2ft = flextable(T2[-1,]) %>%
   theme_vanilla() %>% 
   set_caption(
     "Table 2. Percentage of herd predicted to survive under ten theoretical culling strategies associated with different production strategies, as presented by Marom and Bar-Oz (2009a). Survival probabilities derived from aRedding (1981), bPayne (1973), and cVigne and Helmer (2007) correspond to Payne's age class system.")
-T2ft  
+
 
 #-- properties for word doc output
 sect_properties <- prop_section(
@@ -125,16 +126,24 @@ sect_properties <- prop_section(
 getwd()
 
 #-- create output word doc
-save_as_docx(T2ft, path = "tables/Table2_survival_rates.docx", pr_section = sect_properties)
+# save_as_docx(T2ft, path = "tables/Table2_survival_rates.docx", pr_section = sect_properties)
+# T2ft  
+# rm(T2, T2ft)
+```
 
-rm(T2, T2ft)
+```{r, T2, echo=FALSE}
+T2ft %>% 
+  set_caption(
+    "Table 2. Percentage of herd predicted to survive under ten theoretical culling strategies associated with different production strategies, as presented by Marom and Bar-Oz (2009a). Survival probabilities derived from aRedding (1981), bPayne (1973), and cVigne and Helmer (2007) correspond to Payne's age class system.")
 ```
 
 ### Age-at-death data from four Neolithic sites
 
-Age-at-death data for sheep and goat mandibles collected from **Benkovac-Barice**, **Graduša-Lokve at Islam Grčki**, **Smilčić**, and **Zemunik Donji** are used to create survival probabilities for each age class [@Triozzi2024]. First, the data is called from `age_at_death_data.csv`. The data has already been formatted and filtered, combining all goats and sheep as ovicaprids, and dropping Late Neolithic Islam Grcki, for which there are only 10 mandibles. The absolute frequencies are calculated using the `HerdDynamics` function, `correct_counts()` to account for mandibles that were assigned multiple age classes. Survivorship probabilities are calculated following Price et al. [-@Price2016], using the function `survivorship()` from `HerdDynamics` package. Lastly, the data is formatted as a list, similar to the `offtake.models` list created previously.
+Age-at-death data for sheep and goat mandibles collected from **Benkovac-Barice**, **Graduša-Lokve at Islam Grčki**, **Smilčić**, and **Zemunik Donji** are used to create survival probabilities for each age class [@Triozzi2024]. 
 
-```{r, age-at-death data, include=FALSE}
+The data is included in the `age_at_death_data.csv` file and combines all goats and sheep as ovicaprids. The absolute frequencies are calculated using `HerdDynamics::correct_counts()` to account for mandibles that were assigned multiple age classes. Survivorship probabilities are calculated following Price et al. [-@Price2016], using the function `HerdDynamics::survivorship()`. In a final step the data is formatted as a list to conform with the `offtake.models` list created previously.
+
+```{r, age-at-death data, include = FALSE}
 #-- read in age-at-death data
 wear.df = read.table(file = "./data/age_at_death_data.csv", sep = ",")
 
@@ -178,7 +187,7 @@ culling.profiles = culling.profiles2
 # rm(wear.df, wear.df.list, ages.list, l.names)
 ```
 
-```{r, Table-3-site-survivorship, echo=FALSE}
+```{r, Table-3-site-survivorship, echo=FALSE, include=FALSE}
 #-- Create Table of survival probabilities from culling data allocated to distribution of ages used in model
 
 T3 = cbind.data.frame( c("", Payne_ages$ageClasses) , do.call( cbind.data.frame, args = c( culling.profiles )) )
@@ -204,10 +213,14 @@ T3ft = flextable(T3[-1,]) %>%
 
 T3ft = T3ft %>% set_caption("Table 3. Survival probabilities for caprines at four Neolithic Sites in Dalmatia.")
 
-# save_as_docx(T3ft, path = "tables/Table3_Site_survival_rates.docx", pr_section = sect_properties)
-T3ft
+save_as_docx(T3ft, path = "tables/Table3_Site_survival_rates.docx", pr_section = sect_properties)
 
-rm(T3, T3ft)
+
+# rm(T3, T3ft)
+```
+
+```{r T3, echo=FALSE}
+T3ft %>% set_caption("Table 3. Survival probabilities for caprines at four Neolithic Sites in Dalmatia.")
 ```
 
 ```{r, set-colorpalatte, include=FALSE}
@@ -215,23 +228,20 @@ rm(T3, T3ft)
 cbPalette = carto_pal(10, "Safe")
 ```
 
-```{r, Figure-S1-1-suvivorship-curves, echo=FALSE, fig.dim=c(6 , 4), fig.cap="Figure S1.1. Survivorship curves for threoretical harvest strategies." }
-
+```{r, Figure-S3.2-suvivorship-curves, echo=FALSE, fig.dim=c(6 , 4), fig.cap="Figure S3.2. Survivorship curves for archaeological culling strategies." }
 #-- a function to plot survivorship curves
 HerdDynamics::culling_multiplot(culling.profiles)
-
-
 ```
 
 ## Herd Population Growth Parameters
 
-Offtake represents the number of animals slaughtered in each age group. These numbers will affect herd size changes by restricting the number of animals available to reproduce. Two other important parameters are *intrinsic mortality* and *fertility*.  
+Offtake rates are used to calculate the number of animals slaughtered in each age group and are the primary constraint on population growth. Two other important parameters are **intrinsic mortality** and **fertility**. The fertility and mortality parameters are stored in the files `parameters.csv` and `prolificacy.csv` in the `data` folder.  
 
 ### Mortality 
 
-The probability that an animal will survive from one time step to the next is affected by the competing risks of being slaughtered (i.e., offtake) and intrinsic mortality. We set intrinsic mortality for males and females separately. According to Redding [-@Redding1981], there is no conclusive evidence that there is a difference in mortality between male and female lambs and kids. Redding applies a mortality rate of 32% for lambs and 45% for kids in the first year of life. These rates can be proportionally allocated to the first three age classes, which include animals under 1 year. Redding [-@Redding1981] assigns ewe and doe mortality from ages 1-9 to 18% per year; 10% for rams and 15% for bucks aged 1 to 2 years, 5% for both species ages 2-6 years and 100% for ages six and up. Male mortality is modeled slightly lower than female mortality since rams and bucks selected for breeding should be more robust and have better resistance to disease, whereas this artificial selection should be weaker for females. We simulate this via higher mortality for older females.
+The probability that an animal will survive from one time step to the next is influenced by the competing hazards of being slaughtered (i.e., offtake) and intrinsic mortality (i.e., due to disease, starvation, etc.). 
 
-In this program age classes for males and females may be specified separately. However, culling profiles constructed from archaeological remains cannot distinguish male from female mandibles. Therefore, offtake rates modeled here will be applied to the entire herd while intrinsic mortality rates will be defined separately for males and females.
+Different intrinsic mortality rates are applied to males and females. We apply mortality rates of 10% and 15% for males and females, respectively.  Male mortality is modeled slightly lower than female mortality since rams and bucks selected for breeding should be more robust and have better resistance to disease, whereas this artificial selection should be weaker for females. We simulate this via higher mortality for older females.
 
 
 ### Fertility - Reproduction Parameters
@@ -242,6 +252,14 @@ Several parameters are important regarding the reproductive biology of goats and
 
 `prolificacy` specifies the prolificacy rate, defined as the number of live offspring per parturition per year. Goats are capable of giving birth to twins, triplets, and quadruplets, while kidding rates increase with age up to five or six years (Redding, 1981:70). To simulate stochastic inter-annual variation in fertility, a function is used to sample prolificacy rates from a normal distribution given mean kidding and lambing rates obtained from the literature. The `prolificacy.csv` file contains this data.
 
+```{r, prolificacy-data, echo=TRUE}
+#-- read in lambing and kidding rates
+pro.dat = read.csv("data/prolificacy.csv")
+#-- summarize prolificacy rates from the literature
+NetPro = pro.dat %>% group_by(Taxon) %>% reframe(mn.pro = mean(LitterSize), sd.pro = sd(LitterSize))
+NetPro
+```
+
 The net fecundity rate is the product of the parturition and net prolificacy rates. The parturition rate is calculated differently for birth-pulse (all births occur at the same time) and birth-flow models (births occur continuously  over the time interval (t, t+1)). The Parturition rate `vpar` is dependent on the number of individuals removed from the herd, or `ptot` which is the sum of natural death rates and offtake rates:
 $$vpar=\frac{1-ptot}{2}*hpar$$ 
 where `hpar` is the number of parturitions expected per female-time unit. 
@@ -249,41 +267,32 @@ where `hpar` is the number of parturitions expected per female-time unit.
 ```{r, fertility-mortality-data, echo=FALSE}
 #-- read in parameters file for mortality, prolificacy, and parturition rates
 param.dat = read.csv("data/parameters.csv")
-#-- read in lambing and kidding rates
-pro.dat = read.csv("data/prolificacy.csv")
 ```
 
 Using the mortality and prolificacy data called in the previous chunk two lists are created (one for goats, one for sheep) containing the fertility and mortality parameters used to compute **lambda** ($\lambda$), reproductive values, and project herd growth. The function `generate_prolificacy_rates()` is used to vary inter-annual fertility values. This function and `generate_infant_mortality_rates` are included in HerdDynamics package.
 
 The above function is used in this chunk to generate a series of prolificacy rates based on fertility data. Also defined is the function `Part.rate` which calculates $ARR$.
-
-```{r, parm-lists, echo=TRUE}
-# param.dat$Age = ages
-
-#-- function for auto-generating prolificacy rates, used in build param function when prolificacyRate="auto"
-NetPro = pro.dat %>% group_by(Taxon) %>% reframe(mn.pro = mean(LitterSize), sd.pro = sd(LitterSize))
-NetPro
-
-#-- Ages, parturition rate, and age of first parturition set here
-ages = unique(param.dat$Age)
-
+```{r, ARR, echo=TRUE}
 #-- function to calculate annual reproduction rate (ARR), included in HerdDynamics package 
 ARR = function(mean_litter_size, parturition_interval){
   (mean_litter_size * 365) / parturition_interval
 }
 
 ARR(mean_litter_size = 1.3, parturition_interval = 300)
+```
 
-#-- age of first parturition set to animals in the 1-2 year age class
+```{r, parm-lists, echo=TRUE}
+#-- Ages, parturition interval, and age of first parturition set here
+ages = unique(param.dat$Age)
 parturition.Interval = 300 
 part.age = 2
 
-#-- get vector of age structured mortality rates for male and female goats
-goat.mort.f = param.dat %>% filter(Taxon == "Goat" & Sex == "Female") %>% select(Mortality)
-goat.mort.m = param.dat %>% filter(Taxon == "Goat" & Sex == "Male") %>% select(Mortality)
-#-- get vector of age structured mortality rates for male and female sheep
-sheep.mort.f = param.dat %>% filter(Taxon == "Sheep" & Sex == "Female") %>% select(Mortality)
-sheep.mort.m = param.dat %>% filter(Taxon == "Sheep" & Sex == "Male") %>% select(Mortality)
+#-- function to get vector of age structured mortality rates for male and female goats and sheep
+get_mortality <- function(taxon, sex) {
+  param.dat %>%
+    filter(Taxon == taxon, Sex == sex) %>%
+    pull(Mortality)
+}
 
 #-- create parms lists
 goat.parms = list(
@@ -293,8 +302,8 @@ goat.parms = list(
   part.age = part.age,
   MeanProlificacy = NetPro$mn.pro[1], 
   sdProlificacy = NetPro$sd.pro[1], 
-  f.mortality = as.vector(goat.mort.f$Mortality),
-  m.mortality = as.vector(goat.mort.m$Mortality)
+  f.mortality = get_mortality("Goat", "Female"),
+  m.mortality = get_mortality("Goat", "Male")
 )
 
 sheep.parms = list(
@@ -304,25 +313,14 @@ sheep.parms = list(
   part.age = part.age,
   MeanProlificacy = NetPro$mn.pro[2], 
   sdProlificacy = NetPro$sd.pro[2], 
-  f.mortality = as.vector(sheep.mort.f$Mortality),
-  m.mortality = as.vector(sheep.mort.m$Mortality)
+  f.mortality = get_mortality("Sheep", "Female"),
+  m.mortality = get_mortality("Sheep", "Male")
 )
-
-#-- clean up
-rm( goat.mort.m, goat.mort.f, sheep.mort.m, sheep.mort.f, pro.dat)
-
 ```
 
 
-```{r, Table1, include=FALSE}
+```{r, Table1-parameters, include=FALSE}
 set.seed(388)
-# generate_prolificacy_rates(meanPro = NetPro$mn.pro[1], sdPro = NetPro$sd.pro[1], n = 6)
-# 
-# sapply(c("Goat", "Sheep")), function(x) {
-#   param.dat$Prolificacy[param.dat$ParturitionRate>0 & param.dat$Taxon==x] = generate_prolificacy_rates(meanPro = NetPro$mn.pro[1], sdPro = NetPro$sd.pro[1], n = 6)
-#   param.dat$ParturitionRate[param.dat$ParturitionRate>0 & param.dat$Taxon==x] = Part.rate(NetPro$mn.pro[1], parturition.Interval)
-# })
-# 
 #-- generate Prolificacy rates for Table 2 using function above
 param.dat$Prolificacy[param.dat$ParturitionRate>0 & param.dat$Taxon=="Goat"] = generate_prolificacy_rates(meanPro = NetPro$mn.pro[1], sdPro = NetPro$sd.pro[1], n = 6)
 param.dat$Prolificacy[param.dat$ParturitionRate>0 & param.dat$Taxon=="Sheep"] = generate_prolificacy_rates(meanPro = NetPro$mn.pro[2], sdPro = NetPro$sd.pro[2], n = 6)
@@ -374,7 +372,7 @@ sect_properties <- prop_section(
 t1 %>% set_caption("Table 1. Parameters used to construct the Lefkovitch population projection matrix for sheep and goats. Parturition and prolificacy rates one possible outcome of the sampling procedure.")
 # #-- create output word doc
 save_as_docx(t1, path = "./tables/Table1_parameters.docx", pr_section = sect_properties)
-rm(t1)
+# rm(t1)
 
 ```
 
@@ -385,25 +383,21 @@ Now that the mortality, offtake, and fertility parameters have been defined, it'
 In the chunk below, `Baseline.offtake` is created as a list of 100% survivorship for all age classes to model herd growth with no offtake. The list is appended to the list of all offtake models to be run in the subsequent projections.
 
 ```{r, offtake-survivorship}
+#-- create Baseline offtake (no offtake, 100% survivorship)
+Baseline.offtake = list(Baseline = rep(100, length(offtake_models$Energy)))
 
-#-- put all harvest strategies into a single list
-Baseline.offtake = list(rep(100, length(offtake_models$Energy)))
-names(Baseline.offtake) = "Baseline"
-all.offtake = append(offtake_models, culling.profiles)
-all.offtake = append(offtake_models, culling.profiles2)
-all.offtake = append(all.offtake, Baseline.offtake)
+#-- put all culling strategies into a single list
+all.offtake <-  c(offtake_models, culling.profiles, Baseline.offtake)
 
-#-- convert survivorship to mortality
+#-- convert survivorship to mortality probabilities
 offtake.mortality = lapply(all.offtake, function(x){1-(x/100)})
 
 ```
 
-
-Next, a list variable containing all the  parameters defined above, the original `tcla` table, `nbphase`, and a female offtake modifier, `female.offtake` is created and named `param.props`. This list is supplied to the `build.param` function which streamlines the creation of the hazards table and Lefkovitch matrix used by mmage to project population changes. The variable `female.offtake` is supplied (or not, if set to `NULL`). This value adjusts the female offtake rate, setting the female offtake probabilities to a product of offtake, female mortality, and `female.offtake`. Setting this value to 0 implies that females exit the herd acording to female mortality probabilities. Since those values are global, setting `female.offtake` to 0 eliminates all variation between different offtake models with respect to herd growth and defeats the purpose of this experiment. `female.offtake` is therefore set to `15` reflecting a culling rate of females due to infertility reported by Malher et al. [-@Malher2001].
+Next, a list named `param.props` containing all the  parameters defined above, the original `tcla` table, `nbphase`, and a female offtake modifier, `female.offtake` is created. The list is supplied to the `build.param` function which streamlines the creation of the hazards table and Lefkovitch matrix used by `mmage` to project population changes. The variable `female.offtake` is supplied (or not, if set to `NULL`) to adjusts the female offtake rate. Setting `female.offtake` to 0 implies that females exit the herd only through natural deaths and eliminates all variation between different culling strategies models with respect to herd growth and defeats the purpose of this experiment. `female.offtake` is therefore set to `15` reflecting a culling rate of females due to infertility reported by Malher et al. [-@Malher2001].
 
 
 ```{r, CombineParams, echo=TRUE}
-
 #-- This number is used to account for culling of females due to infertility. If Null, no female offtake assumed.
 female.offtake = 15
 
@@ -416,27 +410,20 @@ goat.param.props = list(
 param.props = list(goat = goat.param.props, sheep = sheep.param.props)
 ```
 
-This chunk shows the definition of the  `vary.fert.mort()` function, which is used to generate a new set of prolificacy and fertility rates based on mean and standard deviations provided in `parms`.
+The  `vary.fert.mort()` function produces new sets of prolificacy and fertility rates using `HerdDynamics::generate_prolificacy_rates()` and `HerdDynamics::generate_AdultMortalityRates()`, which sample from a normal distribution of mean and standard deviations provided in `parms`. The function will run each time a new parameter table is created to simulate inter-annual variation in fertility and mortality.
 
 ```{r, varyfert_mort}
 set.seed(123)
 #-- function to vary prolificacy and mortality
-# source("../R/varyFertMort.R")
 vary.fert.mort = function( parms, n = 6 ){
   parms$prolificacy = generate_prolificacy_rates(
     meanPro = parms$MeanProlificacy,
     sdPro = parms$sdProlificacy,
     n = n
     )
+  
   #-- vary parturition rate
   parms$parturition = ARR(mean(parms$prolificacy), parms$parturition.Interval)
-  
-  
-  # generate_InfantMortalityRates <- function( Mort = f.mortality, n = 3) {
-  #   inf.mort = Mort[1:3]
-  #   sort( generate_ProlificacyRates( meanPro = mean( inf.mort ), sdPro = sd( inf.mort ), n = 3), decreasing = TRUE )
-    # sort( generate_ProlificacyRates( meanPro = sum( inf.mort ), sdPro = sd( inf.mort ), n = 3), decreasing = TRUE )
-  # }
   
   generate_AdultMortalityRates <- function( Mort = f.mortality, n = 6) {
     adult.mort = Mort[4:length(Mort)]
@@ -456,17 +443,21 @@ vary.fert.mort = function( parms, n = 6 ){
     )
   return(parms)
 }
+```
 
+Here is an example of the parameters used for a single year.
+```{r, varyfert_mort-example, echo=TRUE}
 #-- example of parameters created for a single year.
 vary.fert.mort(parms = goat.parms)
 ```
 
-
+### Create Parameter Tables for Each Culling Strategy
 Here a single param table is created for each survivorship profile in **two steps**. 
 
 **First**, the parms object is updated with prolificacy and infant mortality rates generated by sampling from a normal distribution using the `vary.fert.mort()` function defined above. 
 
 **Second**, build_param function is run which creates a table that contains offtake, mortality, fecundity, and survival probabilities for each age class
+
 
 ```{r, Lefkovich-matrix}
 #-- create param table for each offtake strategy with varying fertility and mortality
@@ -484,28 +475,24 @@ str(param$goat$Energy$param)
 rm(sheep.param.props, goat.param.props, Baseline.offtake)
 
 ```
+
+The example above creates a list of parameter tables for each offtake strategy for both goats and sheep with varying fertility and mortality parameters for a single year. In the next part, these tables will be used to simulate environmental variation over multiple years.
+
 # Part II - Simulating Environmental Variation
 
 In the previous chunk, the function `build.param()` was run to produce a parameter set using auto-generated prolificacy rates and infant mortality rates using mean and standard deviation for each taxon. 
 
 In this chunk, environmental variation is simulated by creating a new `param` table for each time-step containing unique sets of fertility and mortality parameters using the `vary.fert.mort()` function described above. This is done using the `make.listpar()` function which has the `vary.fert.mort()` function built into it. The function simulates a single environment with unique fertility and mortality rates while keeping the offtake rates defined earlier constant. The environment is called `listpar`. The number of years over which the simulation will run is specified by `nbcycle`.
 
-```{r, Environment-list, eval=FALSE}
-
+```{r, Environment-list, eval=TRUE}
 source("./R/makeListpar.R")
-# 
-#-- makeListpar definition
+#-- make.listpar definition
 make.listpar = function( param.props, nbcycle, offtake.mortality  ){
-  # source("../R/buildparam.R")
-  # source("../R/varyFertMort.R")
   with( param.props, {
-
     #-- get number of timesteps
     nbstep = nbcycle * nbphase
-
     #-- create list of parms
     parms.rep = replicate(n = nbstep, vary.fert.mort( parms = parms ), simplify = FALSE)
-
     #-- create listpar
     lapply(offtake.mortality, function(o){
       lapply(parms.rep, function(p){
@@ -522,42 +509,15 @@ make.listpar = function( param.props, nbcycle, offtake.mortality  ){
 }
 ```
 
-# Create Stochastic Environment
-Using the functions defined above ('vary.fert.mort()' and 'make.listpar()'), a stochastic environment is created for each offtake strategy. The function `make.listpar()` is run with the parameters defined above. The number of cycles is set to `200` and the initial population size is set to `150`.
+## Generate Stochastic Environment
+Using the functions defined above, a stochastic environment is created for each offtake strategy. The function `make.listpar()` is run with the parameters defined above. The number of cycles is set to `200` and the initial population size is set to `150`.
 
-
-```{r}
+```{r, Stochastic-environment, echo=TRUE, eval=TRUE}
 set.seed(600)
 #-- set number of cycles and initial population size
 nbcycle = 200
 p0 = 150
 
-#-- makeListpar definition
-make.listpar = function( param.props, nbcycle, offtake.mortality  ){
-  # source("../R/buildparam.R")
-  # source("../R/varyFertMort.R")
-  with( param.props, {
-
-    #-- get number of timesteps
-    nbstep = nbcycle * nbphase
-
-    #-- create list of parms
-    parms.rep = replicate(n = nbstep, vary.fert.mort( parms = parms ), simplify = FALSE)
-
-    #-- create listpar
-    lapply(offtake.mortality, function(o){
-      lapply(parms.rep, function(p){
-        build_param(
-          tcla = tcla,
-          parms = p, offtake = o,
-          female.offtake = female.offtake,
-          correctionfec = TRUE,
-          nbphase = nbphase
-        )$param
-      })
-    })
-  })
-}
 #-- uncomment lines below to re-create simulation environment or use existing by loading from data folder
 listpar = lapply(param.props, function(p){
   make.listpar(
@@ -572,8 +532,7 @@ save(listpar, file = "data/listpar.RData")
 load(file = "data/listpar.RData")
 ```
 
-
-## Basic Herd structure and growth
+### Basic Herd structure and growth
 With the fertility and mortality rates have been established the next step is to extract the structure of the herd, lambda, and the proportion of male to females for each model. To do this, an initial herd size, `p0` is set to `150`. In the following chunk, these traits are calculated for comparison of the impacts of culling strategies on herd demography. 
 
 While lambda can be computed from a single `param` table, the herd multiplication rate will change from one time-step to the next as fertility and mortality rates change. To estimate lambda given this variation a bootstrapping procedure is used. 
@@ -582,9 +541,6 @@ Using the list of mortality and fertility parameters created in the previous chu
 
 With the environment simulated as `listpar`, the chunk below calculates lambda and proportion of females for each year under each offtake strategy.
 ```{r, Lambda-sex-proportion, cache=TRUE, echo=TRUE}
-#-- a function that gets lambda, sex proportion, and herd structure.
-# source("../R/getLambda.R")
-
 #-- wrapper function to get demography information from every listpar table
 wrapper.repro = function( listpar, out = c("lambda", "sex") ){
   out <- match.arg(out)
@@ -608,17 +564,17 @@ wrapper.repro = function( listpar, out = c("lambda", "sex") ){
 #-- put all lambda and female proportions in lists
 lambda.list = wrapper.repro(listpar, out = "lambda")
 sex.prop.list = wrapper.repro(listpar, out = "sex")
-
-names(lambda.list) = names(listpar)
-names(sex.prop.list) = names(listpar)
-
+#-- assign names to each list
+names(lambda.list) <- names(sex.prop.list) <- names(listpar)
+#-- unlist each list
 lambda.list = unlist(lambda.list, recursive = F)
 sex.prop.list = unlist(sex.prop.list, recursive = F)
-
 ```
 
 ## Bootstrap lambda and sex proportions
+
 This chunk defines the function used in the bootstrap estimation of mean $\lambda$ ($\lambda_{boot}$)  and proportion of females. The bootstrap is replicated 1000 times. The output is `repro.boot.df`.
+
 ```{r, Bootstrap, echo=TRUE}
 set.seed(665)
 #-- Define function to calculate the mean
@@ -674,14 +630,16 @@ repro.boot.df = cbind.data.frame(
       )
   )
 
-head(repro.boot.df)
-write.table(repro.boot.df, file = "output/reproboot.csv", sep = ",")
-
-# rm(lambda.list, sex.prop.list, sex.prop.boot.df)
-
+head(repro.boot.df[, 1:6])
 ```
 
-```{r lambda-plot}
+```{r write-reproboot-results, echo=FALSE, include=FALSE}
+write.table(repro.boot.df, file = "output/reproboot.csv", sep = ",")
+#-- clean up environment
+# rm(lambda.list, sex.prop.list, sex.prop.boot.df)
+```
+
+```{r lambda-plot, echo=FALSE, fig.dim=c(6 , 4), fig.cap="Figure S3.3. Bootstrapped estimates of lambda ($\\lambda_{boot}$) for each culling strategy showing 95% confidence intervals. A horizontal dashed line at $\\lambda$ = 1 indicates stable population growth." }
 #-- Plot bootstrapped lambda results
 Fig3 = repro.boot.df %>%
   mutate(strategy = factor(strategy, levels = repro.boot.df$strategy[1:16])) %>%
@@ -703,9 +661,6 @@ ggsave(Fig3, filename = "./Figures/Fig3_lambda-boot.jpg", dpi = 300, width = 6, 
 
 ```{r, Loadreproboot-results, include=FALSE}
 repro.boot.df = read.table("output/reproboot.csv", header = T, sep = ",")
-head(repro.boot.df)
-
-repro.boot.df %>% filter(strategy == "Baseline")
 ```
 
 
@@ -772,9 +727,16 @@ save_as_docx(t5, path = "tables/Table5_lambda_culling.docx", pr_section = sect_p
 
 ```
 
+Tables 4 and 5 show the bootstrapped estimates of $\lambda_{boot}$ and proportion of males and females in the herd for each culling strategy.
+```{r, Table4-lambda-theory, echo=FALSE}
+t4
+```
+```{r, Table5-lambda-culling, echo=FALSE}
+t5
+```
 
-In this chunk, $\lambda_{boot}$ and proportion of females in the herd are plotted to show the negative correlation between these two values. 
-```{r, Lambda-Female-corr, echo=TRUE}
+$\lambda_{boot}$ and proportion of females in the herd are negatively correlated.  
+```{r, Lambda-Female-corr, echo=FALSE, eval=TRUE}
 #-- check correlation between lambda and sex proportions
 repro.boot.df %>% filter(strategy!="Baseline") %>% with(cor.test( Lambda, `Proportion Female` ))
 
@@ -805,13 +767,19 @@ strip.labeller = lambda.boot.df %>%
   select(strategy, lambda.lab)
 
 #-- create labels
-strip.labs = as.list(strip.labeller$lambda.lab)
-names(strip.labs) = strip.labeller$strategy
+# strip.labs = as.list(strip.labeller$lambda.lab)
+# names(strip.labs) = strip.labeller$strategy
 
-#-- labeller function
-strip_labeller <- function(var, val){
-  return(strip.labs[val])
-}
+strip_labels = setNames( c(strip.labeller$lambda.lab), c(strip.labeller$strategy))
+# #-- labeller function
+# strip_labeller <- function(variable, value){
+#   return(strip.labs[value])
+# }
+# 
+# strip_labeller <- function(labels){
+#   strip.labeller$lambda.lab
+# } 
+
 ```
 
 
@@ -837,7 +805,7 @@ repro.boot.df %>%
   ylab( "Proportion" ) +
   scale_fill_manual( values = cbPalette ) +
   theme_minimal()  +
-  facet_wrap( ~ strategy , labeller = strip_labeller)
+  facet_wrap( ~ strategy , labeller = as_labeller(strip_labels))
 
 ```
 
@@ -853,9 +821,10 @@ repro = lapply(listpar, function(l){
     get_lambda(x[[1]], tcla=tcla, p0=p0) 
   })
 })
+#-- age classes vector for plotting
+ageClasses = c("", Payne_ages$ageClasses)
 
 #-- wrapper function to get a dataframe with herd structure from repro object
-ageClasses = c("", Payne_ages$ageClasses)
 xini.to.data.frame = function( repro, ageClasses, ages ) {
   xini.list = lapply(repro, function( r ) {  # given repro, a list of reproductive params for n species,
     lapply( r, function( x ) {
@@ -911,7 +880,7 @@ Fig4 = xini.df %>% filter( n > 0 ) %>%
     line = element_line(linewidth = 0.2),
     legend.position = "bottom"
     ) +
-  facet_wrap( ~ strategy, labeller = strip_labeller )
+  facet_wrap( ~ strategy, labeller =as_labeller(strip_labels)) #  strip_labeller )
 
 Fig4
 ggsave("Figures/Fig4_herd_structure.jpg", Fig4, width = 6, height = 4)
@@ -994,7 +963,7 @@ Fig5 = tot.pop.df %>%
   geom_col(aes( time, pop, fill = Taxon), alpha = 0.8) + 
   scale_fill_manual(breaks = c( "goat", "sheep"), values = cbPalette[c(1,2)], labels = c(  "Goat", "Sheep" )) +
   labs(x = "Time (years)",y = "Number of animals") +
-  facet_wrap( ~ strategy, labeller = strip_labeller, scales = "free_y" ) + 
+  facet_wrap( ~ strategy, labeller = as_labeller(strip_labels), scales = "free_y" ) + 
   theme_minimal() +
   theme(legend.position = "bottom",
         line = element_line(linewidth = 0.2),
@@ -1094,7 +1063,7 @@ Fig7 = sto.res.df %>%
     labels = c("Goat", "Sheep")
     ) +
   theme_minimal() +
-  facet_wrap( ~ strategy, scales = "free_y", labeller = strip_labeller ) +
+  facet_wrap( ~ strategy, scales = "free_y", labeller = as_labeller(strip_labels) ) +
   theme(strip.text = element_text(size = 8),
         axis.text = element_text(size = 6),
         legend.position = "bottom",
@@ -1239,7 +1208,7 @@ plot.projection = function( df, offtake.list ){
       labels = c(  "Goat", "Sheep" )
       ) +
     labs(x = "Time (years)",y = "Number of animals") +
-    facet_wrap( ~ strategy, scales = "free_y" , labeller = strip_labeller ) +
+    facet_wrap( ~ strategy, scales = "free_y" , labeller = as_labeller(strip_labels) ) +
     theme_minimal()
 }
 
@@ -1274,7 +1243,7 @@ Fig8 = all.res.df %>%
         axis.title.x = element_text(size = 6),
         axis.title.y.left = element_text(size = 6),
         ) +
-  facet_wrap( ~ strategy , scales = "free_y",labeller = strip_labeller)
+  facet_wrap( ~ strategy , scales = "free_y", labeller = as_labeller(strip_labels))
 
 Fig8
 ggsave( "Figures/Fig8_reprojections.jpg", plot =  Fig8 , width = 6, height = 4)
