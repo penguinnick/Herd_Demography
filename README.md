@@ -470,10 +470,6 @@ str(param$goat$Energy$param)
     ##  $ poff   : num  0.00687 0.01319 0.01567 0.03484 0.07668 ...
     ##  $ g      : num  1 0.4558 0.1997 0.114 0.0498 ...
 
-``` r
-rm(sheep.param.props, goat.param.props, Baseline.offtake)
-```
-
 The example above creates a list of parameter tables for each offtake
 strategy for both goats and sheep with varying fertility and mortality
 parameters for a single year. In the next part, these tables will be

@@ -473,6 +473,8 @@ param = lapply(param.props, function( p ) {
   })
 
 str(param$goat$Energy$param)
+```
+```{r, clean-up, include=FALSE}
 rm(sheep.param.props, goat.param.props, Baseline.offtake)
 
 ```
