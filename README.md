@@ -88,7 +88,11 @@ already been set up to track age in months. So we can set `nbphase` to
 ``` r
 #-- Build tcla table using HerdDynamics::build_tcla() 
 nbphase = 1
-tcla = build_tcla(female.ages = Payne_ages$lclass, male.ages = Payne_ages$lclass, nbphase = nbphase)
+tcla = build_tcla(
+  female.ages = Payne_ages$lclass,
+  male.ages = Payne_ages$lclass,
+  nbphase = nbphase
+)
 tcla
 ```
 
@@ -142,7 +146,9 @@ threoretical culling strategies.</figcaption>
 Age-at-death data for sheep and goat mandibles collected from
 **Benkovac-Barice**, **Graduša-Lokve at Islam Grčki**, **Smilčić**, and
 **Zemunik Donji** are used to create survival probabilities for each age
-class ([Triozzi 2024](#ref-Triozzi2024)).
+class ([Triozzi 2024](#ref-Triozzi2024)). The data is accessible via
+Zenodo ([Triozzi 2025](#ref-Triozzi2025)) \[
+<https://doi.org/https://doi.org/10.5281/zenodo.17697101>\]
 
 The data is included in the `age_at_death_data.csv` file and combines
 all goats and sheep as ovicaprids. The absolute frequencies are
@@ -153,7 +159,14 @@ probabilities are calculated following Price et al.
 `HerdDynamics::survivorship()`. In a final step the data is formatted as
 a list to conform with the `offtake.models` list created previously.
 
-<img src="README_files/figure-gfm/T3-1.png" width="1287" />
+<figure>
+<img src="README_files/figure-gfm/plotFig2-1.png"
+alt="Figure 2. Survivorship curves for archaeological culling strategies." />
+<figcaption aria-hidden="true">Figure 2. Survivorship curves for
+archaeological culling strategies.</figcaption>
+</figure>
+
+<img src="README_files/figure-gfm/print-Table3-1.png" width="1287" />
 
 <figure>
 <img src="README_files/figure-gfm/Figure-S3.2-suvivorship-curves-1.png"
@@ -221,7 +234,8 @@ file contains this data.
 #-- read in lambing and kidding rates
 pro.dat = read.csv("data/prolificacy.csv")
 #-- summarize prolificacy rates from the literature
-NetPro = pro.dat %>% group_by(Taxon) %>% reframe(mn.pro = mean(LitterSize), sd.pro = sd(LitterSize))
+NetPro = pro.dat %>% group_by(Taxon) %>% reframe(mn.pro = mean(LitterSize),
+                                                 sd.pro = sd(LitterSize))
 NetPro
 ```
 
@@ -254,21 +268,12 @@ prolificacy rates based on fertility data. Also defined is the function
 
 ``` r
 #-- function to calculate annual reproduction rate (ARR), included in HerdDynamics package 
-ARR = function(mean_litter_size, parturition_interval){
+ARR = function(mean_litter_size, parturition_interval) {
   (mean_litter_size * 365) / parturition_interval
 }
-
-ARR(mean_litter_size = 1.3, parturition_interval = 300)
 ```
 
-    ## [1] 1.581667
-
 ``` r
-#-- Ages, parturition interval, and age of first parturition set here
-ages = unique(param.dat$Age)
-parturition.Interval = 300 
-part.age = 2
-
 #-- function to get vector of age structured mortality rates for male and female goats and sheep
 get_mortality <- function(taxon, sex) {
   param.dat %>%
@@ -276,25 +281,33 @@ get_mortality <- function(taxon, sex) {
     pull(Mortality)
 }
 
+#-- Ages, parturition interval, and age of first parturition set here
+ages = HerdDynamics::Payne_ages$ages  # unique(param.dat$Age)
+parturition.Interval = 300 
+part.age = 2
+
+
 #-- create parms lists
 goat.parms = list(
   ages = ages,
-  parturition = ARR(NetPro$mn.pro[1], parturition.Interval),  # calculates annual reproduction rate
-  parturition.Interval = 300, 
+  parturition = ARR(NetPro$mn.pro[1], parturition.Interval),
+  # calculates annual reproduction rate
+  parturition.Interval = parturition.Interval,
   part.age = part.age,
-  MeanProlificacy = NetPro$mn.pro[1], 
-  sdProlificacy = NetPro$sd.pro[1], 
+  MeanProlificacy = NetPro$mn.pro[1],
+  sdProlificacy = NetPro$sd.pro[1],
   f.mortality = get_mortality("Goat", "Female"),
   m.mortality = get_mortality("Goat", "Male")
 )
 
 sheep.parms = list(
   ages = ages,
-  parturition = ARR(NetPro$mn.pro[2], parturition.Interval), # calculates annual reproduction rate
-  parturition.Interval = 300, 
+  parturition = ARR(NetPro$mn.pro[2], parturition.Interval),
+  # calculates annual reproduction rate
+  parturition.Interval = parturition.Interval,
   part.age = part.age,
-  MeanProlificacy = NetPro$mn.pro[2], 
-  sdProlificacy = NetPro$sd.pro[2], 
+  MeanProlificacy = NetPro$mn.pro[2],
+  sdProlificacy = NetPro$sd.pro[2],
   f.mortality = get_mortality("Sheep", "Female"),
   m.mortality = get_mortality("Sheep", "Male")
 )
@@ -323,7 +336,9 @@ Baseline.offtake = list(Baseline = rep(100, length(offtake_models$Energy)))
 all.offtake <-  c(offtake_models, culling.profiles, Baseline.offtake)
 
 #-- convert survivorship to mortality probabilities
-offtake.mortality = lapply(all.offtake, function(x){1-(x/100)})
+offtake.mortality = lapply(all.offtake, function(x) {
+  1 - (x / 100)
+})
 ```
 
 Next, a list named `param.props` containing all the parameters defined
@@ -345,10 +360,18 @@ females due to infertility reported by Malher et al.
 female.offtake = 15
 
 sheep.param.props = list(
-  tcla = tcla, parms = sheep.parms, nbphase = nbphase, female.offtake = female.offtake)
+  tcla = tcla,
+  parms = sheep.parms,
+  nbphase = nbphase,
+  female.offtake = female.offtake
+)
 
 goat.param.props = list(
-  tcla = tcla, parms = goat.parms, nbphase = nbphase, female.offtake = female.offtake)
+  tcla = tcla,
+  parms = goat.parms,
+  nbphase = nbphase,
+  female.offtake = female.offtake
+)
 
 param.props = list(goat = goat.param.props, sheep = sheep.param.props)
 ```
@@ -363,32 +386,37 @@ simulate inter-annual variation in fertility and mortality.
 ``` r
 set.seed(123)
 #-- function to vary prolificacy and mortality
-vary.fert.mort = function( parms, n = 6 ){
+vary.fert.mort = function(parms, n = 6) {
   parms$prolificacy = generate_prolificacy_rates(
     meanPro = parms$MeanProlificacy,
     sdPro = parms$sdProlificacy,
     n = n
-    )
+  )
   
   #-- vary parturition rate
-  parms$parturition = ARR(mean(parms$prolificacy), parms$parturition.Interval)
+  # parms$parturition = ARR(mean(parms$prolificacy), parms$parturition.Interval)
+  parms$parturition = ARR(parms$prolificacy, parms$parturition.Interval)
   
-  generate_AdultMortalityRates <- function( Mort = f.mortality, n = 6) {
+  generate_AdultMortalityRates <- function(Mort = f.mortality, n = 6) {
     adult.mort = Mort[4:length(Mort)]
-    sort( generate_prolificacy_rates( meanPro = mean( adult.mort ), sdPro = sd( adult.mort ), n = 6), decreasing = FALSE )
-    # sort( generate_ProlificacyRates( meanPro = sum( inf.mort ), sdPro = sd( inf.mort ), n = 3), decreasing = TRUE )
+    sort(generate_prolificacy_rates(
+      meanPro = mean(adult.mort),
+      sdPro = sd(adult.mort),
+      n = 6
+    ),
+    decreasing = FALSE)
   }
   
   #-- update male and female mortality rates
   parms$f.mortality = c(
     generate_infant_mortality_rates(parms$f.mortality),
     generate_AdultMortalityRates(parms$f.mortality)
-    )
+  )
   
   parms$m.mortality = c(
     generate_infant_mortality_rates(parms$m.mortality),
     generate_AdultMortalityRates(parms$m.mortality)
-    )
+  )
   return(parms)
 }
 ```
@@ -404,7 +432,7 @@ vary.fert.mort(parms = goat.parms)
     ## [1]  0.17  0.50  1.00  2.00  3.00  4.00  6.00  8.00 10.00
     ## 
     ## $parturition
-    ## [1] 2.033403
+    ## [1] 1.606294 1.962037 2.274390 2.414370 2.235979 1.707345
     ## 
     ## $parturition.Interval
     ## [1] 300
@@ -445,14 +473,21 @@ each age class
 ``` r
 #-- create param table for each offtake strategy with varying fertility and mortality
 set.seed(542)
-param = lapply(param.props, function( p ) {
-  p$parms = vary.fert.mort( p$parms )
-  lapply( offtake.mortality, function( o ) {
-    with( p , {
-      build_param( tcla, parms, nbphase, female.offtake,  correctionfec = TRUE, offtake = o)
-      })
+param = lapply(param.props, function(p) {
+  p$parms = vary.fert.mort(p$parms)
+  lapply(offtake.mortality, function(o) {
+    with(p , {
+      build_param(
+        tcla,
+        parms,
+        nbphase,
+        female.offtake,
+        correctionfec = TRUE,
+        offtake = o
+      )
     })
   })
+})
 
 str(param$goat$Energy$param)
 ```
@@ -463,9 +498,9 @@ str(param$goat$Energy$param)
     ##  $ lclass : num  1 2 4 6 12 ...
     ##  $ cellmin: num  0 1 3 7 13 25 37 49 73 97 ...
     ##  $ cellmax: num  0 2 6 12 24 ...
-    ##  $ nupar  : num  0 0 0 0.147 1.815 ...
-    ##  $ ff     : num  0 0 0 0.101 1.246 ...
-    ##  $ fm     : num  0 0 0 0.101 1.246 ...
+    ##  $ nupar  : num  0 0 0 0.135 1.662 ...
+    ##  $ ff     : num  0 0 0 0.0921 1.1417 ...
+    ##  $ fm     : num  0 0 0 0.0921 1.1417 ...
     ##  $ pdea   : num  0.08357 0.14939 0.11631 0.09625 0.00554 ...
     ##  $ poff   : num  0.00687 0.01319 0.01567 0.03484 0.07668 ...
     ##  $ g      : num  1 0.4558 0.1997 0.114 0.0498 ...
@@ -494,18 +529,21 @@ is specified by `nbcycle`.
 ``` r
 source("./R/makeListpar.R")
 #-- make.listpar definition
-make.listpar = function( param.props, nbcycle, offtake.mortality  ){
-  with( param.props, {
+make.listpar = function(param.props, nbcycle, offtake.mortality) {
+  with(param.props, {
     #-- get number of timesteps
     nbstep = nbcycle * nbphase
     #-- create list of parms
-    parms.rep = replicate(n = nbstep, vary.fert.mort( parms = parms ), simplify = FALSE)
+    parms.rep = replicate(n = nbstep,
+                          vary.fert.mort(parms = parms),
+                          simplify = FALSE)
     #-- create listpar
-    lapply(offtake.mortality, function(o){
-      lapply(parms.rep, function(p){
+    lapply(offtake.mortality, function(o) {
+      lapply(parms.rep, function(p) {
         build_param(
           tcla = tcla,
-          parms = p, offtake = o,
+          parms = p,
+          offtake = o,
           female.offtake = female.offtake,
           correctionfec = TRUE,
           nbphase = nbphase
@@ -530,13 +568,13 @@ nbcycle = 200
 p0 = 150
 
 #-- uncomment lines below to re-create simulation environment or use existing by loading from data folder
-listpar = lapply(param.props, function(p){
+listpar = lapply(param.props, function(p) {
   make.listpar(
-    param.props = p, 
-    nbcycle = nbcycle, 
+    param.props = p,
+    nbcycle = nbcycle,
     offtake.mortality = offtake.mortality
-    )
-  })
+  )
+})
 
 #-- save stochastic environment to replicate results
 save(listpar, file = "data/listpar.RData")
@@ -570,20 +608,20 @@ strategy.
 
 ``` r
 #-- wrapper function to get demography information from every listpar table
-wrapper.repro = function( listpar, out = c("lambda", "sex") ){
+wrapper.repro = function(listpar, out = c("lambda", "sex")) {
   out <- match.arg(out)
   lapply(seq_along(listpar), function(l) {
-  p = listpar[[l]]
-  lapply(p, function(s){
-    sapply(s, function(x){
-      r = get_lambda(x, tcla=tcla, p0=p0) #$lambda
-      if(out=="lambda"){
-        return(r$lambda)
-      } else {
-        if(out=="sex"){
-          return(r$sex.proportion[1,2])
+    p = listpar[[l]]
+    lapply(p, function(s) {
+      sapply(s, function(x) {
+        r = get_lambda(x, tcla = tcla, p0 = p0) #$lambda
+        if (out == "lambda") {
+          return(r$lambda)
+        } else {
+          if (out == "sex") {
+            return(r$sex.proportion[1, 2])
+          }
         }
-      }
       })
     })
   })
@@ -613,63 +651,65 @@ mean_function <- function(data, indices) {
   return(mean(data[indices]))
 }
 
-#-- function to compute bootstrapped mean and 95% confidence intervals 
-boot.fun = function( s, n ){
+#-- function to compute bootstrapped mean and 95% confidence intervals
+boot.fun = function(s, n) {
   # Perform bootstrapping
-  bootstrap_results = boot(data = s, statistic = mean_function, R = n )
+  bootstrap_results = boot(data = s,
+                           statistic = mean_function,
+                           R = n)
   # Obtain bootstrapped confidence interval
   boot_conf_interval = boot.ci(bootstrap_results, type = "perc")
   #-- returns mean, lower and upper ci
   return(
     data.frame(
-      t0 = boot_conf_interval$t0, 
-      low = boot_conf_interval$percent[4], 
+      t0 = boot_conf_interval$t0,
+      low = boot_conf_interval$percent[4],
       up = boot_conf_interval$percent[5]
-      )
     )
+  )
 }
 
 #-- set number of bootstrap replicates
 n.boot = 1000
 
 lambda.boot.df = do.call(rbind.data.frame, lapply(lambda.list, FUN = boot.fun, n = n.boot))
-sex.prop.boot.df = do.call(rbind.data.frame, 
-                           lapply(sex.prop.list, function(l){ 
-                             s=unlist(l); boot.fun(s, n.boot) 
-                             }))
+sex.prop.boot.df = do.call(rbind.data.frame, lapply(sex.prop.list, function(l) {
+  s = unlist(l)
+  boot.fun(s, n.boot)
+}))
 
 #-- create taxon and strategy columns
 taxon.strat = str_split(rownames(lambda.boot.df), "\\.", simplify = T)
 
 #-- bind columns from each bootstrapped results table
 repro.boot.df = cbind.data.frame(
-  lambda.boot.df %>% 
+  lambda.boot.df %>%
     reframe(
-      Taxon = taxon.strat[,1], 
-      strategy = taxon.strat[,2], 
-      Lambda = t0, 
-      low.lambda = low, 
+      Taxon = taxon.strat[, 1],
+      strategy = taxon.strat[, 2],
+      Lambda = t0,
+      low.lambda = low,
       up.lambda = up
-      ),
-  sex.prop.boot.df %>% 
+    ),
+  sex.prop.boot.df %>%
     reframe(
-      "Proportion.Female" = t0, 
-      "Proportion.Male" = 1 - t0, 
-      low.sex.F = low, 
+      "Proportion.Female" = t0,
+      "Proportion.Male" = 1 - t0,
+      low.sex.F = low,
       up.sex.F = up
-      )
-  )
+    )
+)
 #-- view first six rows of results
 head(repro.boot.df[, 1:6])
 ```
 
     ##   Taxon strategy   Lambda low.lambda up.lambda Proportion.Female
-    ## 1  goat   Energy 1.006795  0.9999808 1.0136126         0.6119602
-    ## 2  goat Security 0.999645  0.9930901 1.0062981         0.6256652
-    ## 3  goat     Meat 1.002505  0.9958053 1.0089477         0.6667756
-    ## 4  goat     Milk 0.962240  0.9565801 0.9681252         0.7859124
-    ## 5  goat     Wool 1.009340  1.0030086 1.0159178         0.6657699
-    ## 6  goat    MeatA 0.933090  0.9273255 0.9381032         0.7397474
+    ## 1  goat   Energy 0.992475  0.9853677 0.9990849         0.6220557
+    ## 2  goat Security 0.985105  0.9786365 0.9917291         0.6364102
+    ## 3  goat     Meat 0.988670  0.9819625 0.9950885         0.6780823
+    ## 4  goat     Milk 0.949880  0.9440151 0.9556597         0.7966403
+    ## 5  goat     Wool 0.996425  0.9900006 1.0031041         0.6764425
+    ## 6  goat    MeatA 0.920860  0.9149906 0.9259097         0.7521180
 
 <figure>
 <img src="README_files/figure-gfm/lambda-plot-1.png"
@@ -694,13 +734,13 @@ correlated.
     ##  Pearson's product-moment correlation
     ## 
     ## data:  Lambda and Proportion Female
-    ## t = -8.9905, df = 28, p-value = 9.55e-10
+    ## t = -8.4482, df = 28, p-value = 3.463e-09
     ## alternative hypothesis: true correlation is not equal to 0
     ## 95 percent confidence interval:
-    ##  -0.9325402 -0.7273791
+    ##  -0.9252526 -0.7013531
     ## sample estimates:
     ##        cor 
-    ## -0.8618092
+    ## -0.8474836
 
 <figure>
 <img src="README_files/figure-gfm/plot-sex-proportion-1.png"
@@ -718,44 +758,45 @@ This chunk calculates herd structure which is used to produce Figure 4.
 p0 = p0
 
 #-- call function getLambda to extract reproduction traits
-repro = lapply(listpar, function(l){
-  lapply(l, function(x){
-    get_lambda(x[[1]], tcla=tcla, p0=p0) 
+repro = lapply(listpar, function(l) {
+  lapply(l, function(x) {
+    get_lambda(x[[1]], tcla = tcla, p0 = p0)
   })
 })
 #-- age classes vector for plotting
 ageClasses = c("", Payne_ages$ageClasses)
 
 #-- wrapper function to get a dataframe with herd structure from repro object
-xini.to.data.frame = function( repro, ageClasses, ages ) {
-  xini.list = lapply(repro, function( r ) {  # given repro, a list of reproductive params for n species,
-    lapply( r, function( x ) {
+xini.to.data.frame = function(repro, ageClasses, ages) {
+  xini.list = lapply(repro, function(r) {
+    # given repro, a list of reproductive params for n species,
+    lapply(r, function(x) {
       with(x, {
         # summarize initial herds (total males and females for each age class)
         xini = initial.herd %>%
-          group_by( class ) %>%
-          reframe( n = as.integer( sum( xini ) ) )
-        })
+          group_by(class) %>%
+          reframe(n = as.integer(sum(xini)))
       })
     })
-  xini.list = unlist( xini.list, recursive = F ) # unlist species groupings
-  taxon.strat = str_split( names( xini.list ), "\\." ) # create list of species and strategies
+  })
+  xini.list = unlist(xini.list, recursive = F) # unlist species groupings
+  taxon.strat = str_split(names(xini.list), "\\.") # create list of species and strategies
   # create Taxon, strategy, and AgeClass fields for each df in xini.list
-  for ( i in 1: length( xini.list ) ) {
-    ts = taxon.strat[[ i ]]
-    taxon = rep( unlist( ts )[ 1 ], 9 )
-    strat = rep( unlist( ts )[ 2 ], 9 )
-    xini.list[[ i ]]$Taxon = taxon
-    xini.list[[ i ]]$strategy = strat
-    xini.list[[ i ]]$AgeClass = ageClasses[ -1 ]
-    xini.list[[ i ]]$Age = as.character(ages)
+  for (i in 1:length(xini.list)) {
+    ts = taxon.strat[[i]]
+    taxon = rep(unlist(ts)[1], 9)
+    strat = rep(unlist(ts)[2], 9)
+    xini.list[[i]]$Taxon = taxon
+    xini.list[[i]]$strategy = strat
+    xini.list[[i]]$AgeClass = ageClasses[-1]
+    xini.list[[i]]$Age = as.character(ages)
   }
   # call all dataframes into a single df
-  xini.df = do.call( rbind.data.frame, xini.list )
+  xini.df = do.call(rbind.data.frame, xini.list)
   # make strategy field a factor
-  xini.df$strategy = factor( xini.df$strategy, levels = c(  names(offtake.mortality) ))
-  xini.df$AgeClass = factor( xini.df$AgeClass, levels = ageClasses[-1] )
-  return( xini.df )
+  xini.df$strategy = factor(xini.df$strategy, levels = c(names(offtake.mortality)))
+  xini.df$AgeClass = factor(xini.df$AgeClass, levels = ageClasses[-1])
+  return(xini.df)
 }
 
 xini.df = xini.to.data.frame(repro, ageClasses = ageClasses, ages = ages)
@@ -765,10 +806,10 @@ head(xini.df)
     ## # A tibble: 6 × 6
     ##   class     n Taxon strategy AgeClass  Age  
     ##   <int> <int> <chr> <fct>    <fct>     <chr>
-    ## 1     1    48 goat  Energy   A (0-2m)  0.17 
+    ## 1     1    47 goat  Energy   A (0-2m)  0.17 
     ## 2     2    57 goat  Energy   B (2-6m)  0.5  
-    ## 3     3    32 goat  Energy   C (6-12m) 1    
-    ## 4     4     9 goat  Energy   D (1-2y)  2    
+    ## 3     3    33 goat  Energy   C (6-12m) 1    
+    ## 4     4    10 goat  Energy   D (1-2y)  2    
     ## 5     5     1 goat  Energy   E (2-3y)  3    
     ## 6     6     0 goat  Energy   F (3-4y)  4
 
@@ -803,7 +844,9 @@ source("./R/projectHerd2.R")
 
 #-- project herd for each strategy
 listpar = unlist(listpar, recursive = F)
-results = lapply(listpar, function(l) { projectHerd2( listpar = l, p0 = p0) } )
+results = lapply(listpar, function(l) {
+  projectHerd2(listpar = l, p0 = p0)
+})
 ```
 
 ## Output Metrics
@@ -822,23 +865,23 @@ into a single data.frame which we use for plotting.
 
 ``` r
 #-- function to summarize dynamics of the total population through time
-pop_summary2 = function(x, sex = FALSE, interval = "year"){
-  vecx=x$vecx
-  if(interval=="month"){
-    if( sex ) {
-      out = aggregate( x ~ tim + sex , data=vecx, FUN=sum)
+pop_summary2 = function(x, sex = FALSE, interval = "year") {
+  vecx = x$vecx
+  if (interval == "month") {
+    if (sex) {
+      out = aggregate(x ~ tim + sex , data = vecx, FUN = sum)
       colnames(out) = c("time", "sex", "pop")
     } else {
-      out = aggregate(x ~ tim, data=vecx, FUN=sum)
+      out = aggregate(x ~ tim, data = vecx, FUN = sum)
       colnames(out) = c("time", "pop")
     }
   }
-  if(interval=="year"){
-    if( sex ) {
-      out = aggregate( x ~ cycle + sex , data=vecx, FUN=sum)
+  if (interval == "year") {
+    if (sex) {
+      out = aggregate(x ~ cycle + sex , data = vecx, FUN = sum)
       colnames(out) = c("time", "sex", "pop")
     } else {
-      out = aggregate(x ~ cycle , data=vecx, FUN=sum)
+      out = aggregate(x ~ cycle , data = vecx, FUN = sum)
       colnames(out) = c("time", "pop")
     }
   }
@@ -846,10 +889,10 @@ pop_summary2 = function(x, sex = FALSE, interval = "year"){
 }
 
 #-- function to gather results into a single data.frame
-res.to.df = function(tot.pop.res){
-  df = do.call(rbind.data.frame, args=c(tot.pop.res, make.row.names=FALSE))
+res.to.df = function(tot.pop.res) {
+  df = do.call(rbind.data.frame, args = c(tot.pop.res, make.row.names = FALSE))
   strats = names(tot.pop.res)
-  df$strategy = unlist(lapply(strats, FUN=rep, (nrow(df)/length(strats))))
+  df$strategy = unlist(lapply(strats, FUN = rep, (nrow(df) / length(strats))))
   ts = str_split(df$strategy, "\\.", simplify = T)
   df$Taxon = ts[, 1]
   df$strategy = ts[, 2]
@@ -861,7 +904,9 @@ Run helper functions to gather results into a single data.frame
 
 ``` r
 #-- summarize total population through time
-tot.pop.res = lapply(results, function(r){pop_summary2(r, sex = FALSE, interval = "year")})
+tot.pop.res = lapply(results, function(r) {
+  pop_summary2(r, sex = FALSE, interval = "year")
+})
 tot.pop.df = res.to.df(tot.pop.res)
 #-- uncomment to get results by sex
 # tot.pop.res.sex = lapply(results, function(r){pop.summary(r, sex = TRUE, interval = "year")})
@@ -872,11 +917,11 @@ head(tot.pop.df)
 
     ##   time       pop strategy Taxon
     ## 1    1 150.00000   Energy  goat
-    ## 2    2 145.79544   Energy  goat
-    ## 3    3 120.73624   Energy  goat
-    ## 4    4  94.88171   Energy  goat
-    ## 5    5  90.65367   Energy  goat
-    ## 6    6  78.33084   Energy  goat
+    ## 2    2 144.78844   Energy  goat
+    ## 3    3 117.97626   Energy  goat
+    ## 4    4  90.38717   Energy  goat
+    ## 5    5  84.26167   Energy  goat
+    ## 6    6  71.93883   Energy  goat
 
 ``` r
 # head(tot.pop.df.sex)
@@ -901,33 +946,36 @@ To do this, we define a wrapper function, `stochastic.rep()` and use
 
 ``` r
 #-- function to replicate
-stochastic.rep = function( p0, param.props, offtake.mortality, nbcycle ){
+stochastic.rep = function(p0,
+                          param.props,
+                          offtake.mortality,
+                          nbcycle) {
   #-- create new set of environmental parameters
   lp = make.listpar(
-    param.props = param.props, 
-    nbcycle = nbcycle, 
+    param.props = param.props,
+    nbcycle = nbcycle,
     offtake.mortality = list(offtake.mortality)
-    )
+  )
   #-- reproject herd growth
-  result = projectHerd2( listpar = unlist(lp, recursive = F) , p0 = p0 )
+  result = projectHerd2(listpar = unlist(lp, recursive = F) , p0 = p0)
   #-- summarize results
   pop_summary2(result, sex = FALSE, interval = "year")$pop
 }
 
 #-- helper function to transform lists into matrix
-list.to.mat = function( l ){ 
-  n.col = length( l )
-  l.mat = matrix( unlist( l ), ncol = n.col)
+list.to.mat = function(l) {
+  n.col = length(l)
+  l.mat = matrix(unlist(l), ncol = n.col)
   rownames(l.mat) = unique(names(unlist(l)))
   l.mat
 }
 
 #-- helper function to create df from matrix output of replicated stochastic.rep function
-matrix.to.df = function( mat ){
+matrix.to.df = function(mat) {
   df = as.data.frame(mat)
   df$time = as.numeric(str_replace_all(rownames(df), "[:alpha:]|[:punct:]", ""))
   df$strategy = str_replace_all(rownames(df), "[:digit:]", "")
-  df %>% pivot_longer( cols = c(-time, -strategy) )
+  df %>% pivot_longer(cols = c(-time, -strategy))
 }
 ```
 
@@ -940,15 +988,18 @@ nbrep = 10
 nbcycle = nbcycle
 
 #-- run simulation for all strategies
-stochastic.sim.res = replicate(
-  n = nbrep, 
-  lapply(param.props, function( p ){
-    lapply(offtake.mortality, function( o ){
-      r = stochastic.rep(p0 = p0, param.props = p, offtake.mortality = o, nbcycle = nbcycle)
-      })
-    }), 
-  simplify = "array"
-  )
+stochastic.sim.res = replicate(n = nbrep,
+                               lapply(param.props, function(p) {
+                                 lapply(offtake.mortality, function(o) {
+                                   r = stochastic.rep(
+                                     p0 = p0,
+                                     param.props = p,
+                                     offtake.mortality = o,
+                                     nbcycle = nbcycle
+                                   )
+                                 })
+                               }),
+                               simplify = "array")
 
 #-- create matrix, then df from results
 sto.res.mat = apply(stochastic.sim.res, 1, FUN = list.to.mat, simplify = F)
@@ -997,16 +1048,16 @@ growth).
 
 ``` r
 #-- function to adjust offtake based on poff in param table
-get.off.adjust.poff = function( phi, param.ref, m = 1 ){
+get.off.adjust.poff = function(phi, param.ref, m = 1) {
   u = param.ref
-  zf = u$poff[ u$sex == "F" ]
-  zm = u$poff[ u$sex == "M" ]
-  u$poff = c( phi * zf, zm )
-  Lf = length( u$sex[ u$sex == "F" ]) - 1
-  Lm = length( u$sex[ u$sex == "M" ]) - 1
+  zf = u$poff[u$sex == "F"]
+  zm = u$poff[u$sex == "M"]
+  u$poff = c(phi * zf, zm)
+  Lf = length(u$sex[u$sex == "F"]) - 1
+  Lm = length(u$sex[u$sex == "M"]) - 1
   param = u
-  A = mmage::fmat( param, Lf, Lm )$A
-  ( mmage::feig( A )$lambda - m ) ^ 2
+  A = mmage::fmat(param, Lf, Lm)$A
+  (mmage::feig(A)$lambda - m)^2
 }
 ```
 
@@ -1019,32 +1070,38 @@ used to adjust female offtake rates in a new projection.
 ``` r
 #-- optimize to find the value that minimizes (lambda-m)^2 (i.e., difference between projected herd growth rate and objective growth)
 #-- an example of optimized phi
-optimize(f=get.off.adjust.poff, param.ref = listpar$goat.Energy[[1]], interval = c(0,5))$minimum
+optimize(
+  f = get.off.adjust.poff,
+  param.ref = listpar$goat.Energy[[1]],
+  interval = c(0, 5)
+)$minimum
 ```
 
-    ## [1] 0.4787065
+    ## [1] 0.3680571
 
 ``` r
 #-- optimize for all years in the Energy strategy for goats, as an example.
-optimize.res = lapply( listpar$goat.Energy, function( b ){
-  optimize( f = get.off.adjust.poff, param.ref = b, interval = c(0,5))$minimum
-  })
+optimize.res = lapply(listpar$goat.Energy, function(b) {
+  optimize(f = get.off.adjust.poff,
+           param.ref = b,
+           interval = c(0, 5))$minimum
+})
 
 #-- phi
 optimize.res[1:5]
 ```
 
     ## [[1]]
-    ## [1] 0.4787065
+    ## [1] 0.3680571
     ## 
     ## [[2]]
-    ## [1] 0.3442743
+    ## [1] 0.1411207
     ## 
     ## [[3]]
     ## [1] 7.802868e-05
     ## 
     ## [[4]]
-    ## [1] 0.5944769
+    ## [1] 0.3422628
     ## 
     ## [[5]]
     ## [1] 7.802868e-05
@@ -1058,28 +1115,34 @@ $\lambda \ge$ `high.threshold`.
 
 ``` r
 #-- function for adjusting p. female offtake
-adjust.offtake = function( in.param, low.threshold, high.threshold, p0 = 150 ){
+adjust.offtake = function(in.param,
+                          low.threshold,
+                          high.threshold,
+                          p0 = 150) {
   #-- calculate phi.opt
-  phi.opt = optimize(f = get.off.adjust.poff, param.ref = in.param, interval = c(0,5))$minimum
+  phi.opt = optimize(f = get.off.adjust.poff,
+                     param.ref = in.param,
+                     interval = c(0, 5))$minimum
   
   #-- get unadjusted female offtake
-  f.off = in.param$poff[ in.param$sex == "F" & in.param$class > 0 ]
+  f.off = in.param$poff[in.param$sex == "F" & in.param$class > 0]
   
   #-- extract tcla
-  tcla1 = in.param[ , c( 1:5 ) ]
+  tcla1 = in.param[, c(1:5)]
   
   #-- extract lclass
   # lclass1 = in.param$lclass[ in.param$sex=="F" & in.param$class > 0 ]
   
   #-- get lambda
-  lambda = HerdDynamics::get_lambda( param = in.param,  tcla = tcla1, p0 = p0)$lambda
+  lambda = HerdDynamics::get_lambda(param = in.param, tcla = tcla1, p0 = p0)$lambda
   
   #-- compare lambda to threshold value
-  if( lambda < low.threshold | lambda >= high.threshold ){
+  if (lambda < low.threshold | lambda >= high.threshold) {
     #-- if lambda below threshold, adjust female offtake
-    in.param$poff[in.param$sex=="F" & in.param$class > 0] = f.off * phi.opt
+    in.param$poff[in.param$sex == "F" &
+                    in.param$class > 0] = f.off * phi.opt
   } else {
-    in.param$poff[in.param$sex=="F" & in.param$class > 0] = f.off
+    in.param$poff[in.param$sex == "F" & in.param$class > 0] = f.off
   }
   return(in.param)
 }
@@ -1094,27 +1157,31 @@ We now run the `adjust.offtake` optimization algorithm for the 200
 timesteps and project herds using the adjusted culling rates. This
 produces a new `param` tables for every cycle. Based on $\lambda_{boot}$
 estimates, the optimization function will adjust offtake if $\lambda$ is
-below 0.948 or above 1.016. The resulting culling rates are passed to
+below 0.936 or above 1.005. The resulting culling rates are passed to
 `projectHerd2()`. We then gather the results as before and merge them
 with the new results so they can be compared.
 
 ``` r
 #-- reproject with optimization
-new.results = lapply( listpar, function( l ) {
-  l = lapply( l, 
-             FUN = adjust.offtake, 
-             low.threshold = Lambda.threshold.low, 
-             high.threshold = Lambda.threshold.high )
-  projectHerd2( listpar = l, p0 = p0 ) 
-  })
+new.results = lapply(listpar, function(l) {
+  l = lapply(
+    l,
+    FUN = adjust.offtake,
+    low.threshold = Lambda.threshold.low,
+    high.threshold = Lambda.threshold.high
+  )
+  projectHerd2(listpar = l, p0 = p0)
+})
 
 #-- send results to df
-new.tot.pop.res = lapply(new.results, function(r){pop_summary2(r, sex = FALSE, interval = "year")})
+new.tot.pop.res = lapply(new.results, function(r) {
+  pop_summary2(r, sex = FALSE, interval = "year")
+})
 
 # res2df(new.tot.pop.res) # this function is in the HerdDynamics package
 new.pop.res.df = res.to.df(new.tot.pop.res)
 
-#-- create column for offtake adjustment 
+#-- create column for offtake adjustment
 tot.pop.df$offtake = "unadjusted"
 new.pop.res.df$offtake = "adjusted"
 
@@ -1130,7 +1197,7 @@ populations after applying optimized offtake procedure for the Milk A
 and Benkovac-Barice strategies.</figcaption>
 </figure>
 
-# Part V - Evaluate optimization results
+# Part V - Evaluating optimization results
 
 ## Mean herd size
 
@@ -1150,17 +1217,19 @@ simulations.
 source("R/mmagefm.R")
 
 #-- summarize multiplication rate for old and new results
-m.df = lapply( results, function( r ){
-  o = mmage.fm( formula = ~ cycle , vecprod = r$vecprod ); return( data.frame( cycle = o$cycle, m = o$m ))
-  })
+m.df = lapply(results, function(r) {
+  o = mmage.fm(formula = ~ cycle , vecprod = r$vecprod)
+  return(data.frame(cycle = o$cycle, m = o$m))
+})
 m.df = res.to.df(m.df)
 
-new.m.df = lapply(new.results, function(r){
-  o = mmage.fm( formula = ~ cycle , vecprod = r$vecprod ); return( data.frame( cycle = o$cycle, m = o$m ))
-  })
+new.m.df = lapply(new.results, function(r) {
+  o = mmage.fm(formula = ~ cycle , vecprod = r$vecprod)
+  return(data.frame(cycle = o$cycle, m = o$m))
+})
 new.m.df = res.to.df(new.m.df)
 
-#-- create column for offtake adjustment 
+#-- create column for offtake adjustment
 m.df$offtake = "unadjusted"
 new.m.df$offtake = "adjusted"
 
@@ -1176,19 +1245,31 @@ associated article.
 
 ``` r
 #-- Function to calculate moving average
-calculate_moving_average <- function(time_series, window_size, type = c("simple", "exponential"), alpha = 0.1) {
+calculate_moving_average <- function(time_series,
+                                     window_size,
+                                     type = c("simple", "exponential"),
+                                     alpha = 0.1) {
   type <- match.arg(type)
   
   if (type == "simple") {
     # Calculate simple moving average
-    moving_average <- zoo::rollmean(time_series, k = window_size, fill = NA, align = "right")
+    moving_average <- zoo::rollmean(time_series,
+                                    k = window_size,
+                                    fill = NA,
+                                    align = "right")
   } else if (type == "exponential") {
     # Calculate exponential moving average
-    moving_average <- zoo::rollapply(time_series, width = window_size, FUN = function(x) {
-      n <- length(x)
-      weights <- (1 - alpha)^(n:1)
-      sum(weights * x) / sum(weights)
-    }, fill = NA, align = "right")
+    moving_average <- zoo::rollapply(
+      time_series,
+      width = window_size,
+      FUN = function(x) {
+        n <- length(x)
+        weights <- (1 - alpha)^(n:1)
+        sum(weights * x) / sum(weights)
+      },
+      fill = NA,
+      align = "right"
+    )
   }
   
   return(moving_average)
@@ -1309,6 +1390,14 @@ Triozzi, Nicholas Peter. 2024. “<span class="nocase">Herding is Risky
 Business: Agropastoral Strategies in Neolithic Northern
 Dalmatia</span>.” Ph.D. Dissertation, University of California, Santa
 Barbara. <http://dissertations.umi.com/ucsb:16721>.
+
+</div>
+
+<div id="ref-Triozzi2025" class="csl-entry">
+
+———. 2025. “<span class="nocase">Age-at-Death Analysis of Caprine
+mandibles from Neolithic Sites in Dalmatia \[Data set\]</span>.”
+*Zenodo*. https://doi.org/<https://doi.org/10.5281/zenodo.17697101>.
 
 </div>
 
