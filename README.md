@@ -1,5 +1,5 @@
-To Cull or Not to Cull? Using Population Projection Modeling to Reveal
-Risk-Sensitive Herd Culling Strategies in Neolithic Dalmatia
+Evaluating Livestock Culling Practices using Population Projection
+Models in Neolithic Dalmatia
 ================
 Nicholas Triozzi
 2025-02-25
@@ -11,8 +11,8 @@ Nicholas Triozzi
 This document outlines the procedures used to simulate goat and sheep
 herd dynamics under the constraints of various culling strategies. The
 content of this document and associated scripts are supporting materials
-for “To Cull or Not to Cull? Using Population Projection Modeling to
-Reveal Risk-Sensitive Herd Culling Strategies in Neolithic Dalmatia”.
+for “Evaluating Livestock Culling Practices using Population Projection
+Models in Neolithic Dalmatia”.
 
 ## Overview
 
