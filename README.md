@@ -129,7 +129,9 @@ probabilities standardized across nine age classes by Marom and Bar-Oz
 **MeatB**, **MilkA**, **MilkB**) and **Fleece** strategies.
 
 ``` r
-HerdDynamics::culling_multiplot(HerdDynamics::offtake_models)
+# HerdDynamics::culling_multiplot(HerdDynamics::offtake_models)
+source("./R/culling_multiplot2.R")
+culling_multiplot2(offtake_models)
 ```
 
 <figure>
@@ -159,27 +161,10 @@ probabilities are calculated following Price et al.
 `HerdDynamics::survivorship()`. In a final step the data is formatted as
 a list to conform with the `offtake.models` list created previously.
 
-![Figure 2. Survivorship curves for archaeological culling
-strategies.](README_files/figure-gfm/plotFig2-1.png) \### Supplementary
+![Figure 2. Archaeological mortality
+profiles.](README_files/figure-gfm/plotFig2-1.png) \### Supplementary
 Table S4.1: Mandible sample information
-
-``` r
-TableS4.1 <- wear.df %>% 
-  filter(Payne.Group != "") %>%
-  group_by(Site, Period, Species) %>%
-  reframe(N = n()) %>%
-  pivot_wider(names_from = Species, values_from = N) %>% 
-  group_by(Site, Period) %>%
-  reframe(Site, Period, 
-          N = sum(CA, OA, OC),
-          "Goat:Sheep:Indeterminate" = paste0(CA, ":", OA, ":", OC)) %>% 
-  as_flextable() %>%
-  set_caption("Table S4. Sample information for mandibles used to calculate age-at-death distributions for ovicaprids at four Neolithic sites in Dalmatia.") %>% 
-  theme_vanilla()
-  
-#-- create output word doc
-save_as_docx(TableS4.1, path = "tables/TableS4-1_survival_rates.docx", pr_section = sect_properties)
-```
+<img src="README_files/figure-gfm/TableS4-1.png" width="879" />
 
 <img src="README_files/figure-gfm/print-Table3-1.png" width="1287" />
 
@@ -282,7 +267,7 @@ prolificacy rates based on fertility data. Also defined is the function
 `Part.rate` which calculates $ARR$.
 
 ``` r
-#-- function to calculate annual reproduction rate (ARR), included in HerdDynamics package 
+#-- function to calculate annual reproduction rate (ARR), included in HerdDynamics package
 ARR = function(mean_litter_size, parturition_interval) {
   (mean_litter_size * 365) / parturition_interval
 }
@@ -298,7 +283,7 @@ get_mortality <- function(taxon, sex) {
 
 #-- Ages, parturition interval, and age of first parturition set here
 ages = HerdDynamics::Payne_ages$ages  # unique(param.dat$Age)
-parturition.Interval = 300 
+parturition.Interval = 300 # 300 days between births
 part.age = 2
 
 
@@ -372,7 +357,7 @@ females due to infertility reported by Malher et al.
 
 ``` r
 #-- This number is used to account for culling of females due to infertility. If Null, no female offtake assumed.
-female.offtake = 15
+female.offtake = 15 # percentage of culling rate applied to females
 
 sheep.param.props = list(
   tcla = tcla,
@@ -582,6 +567,7 @@ set.seed(600)
 nbcycle = 200
 p0 = 150
 
+system.time({
 #-- uncomment lines below to re-create simulation environment or use existing by loading from data folder
 listpar = lapply(param.props, function(p) {
   make.listpar(
@@ -590,7 +576,13 @@ listpar = lapply(param.props, function(p) {
     offtake.mortality = offtake.mortality
   )
 })
+})
+```
 
+    ##    user  system elapsed 
+    ##   29.99    0.58   31.14
+
+``` r
 #-- save stochastic environment to replicate results
 save(listpar, file = "data/listpar.RData")
 load(file = "data/listpar.RData")
@@ -642,9 +634,17 @@ wrapper.repro = function(listpar, out = c("lambda", "sex")) {
   })
 }
 
-#-- put all lambda and female proportions in lists
+system.time({
+  #-- put all lambda and female proportions in lists
 lambda.list = wrapper.repro(listpar, out = "lambda")
 sex.prop.list = wrapper.repro(listpar, out = "sex")
+})
+```
+
+    ##    user  system elapsed 
+    ##   33.97    1.08   37.21
+
+``` r
 #-- assign names to each list
 names(lambda.list) <- names(sex.prop.list) <- names(listpar)
 #-- unlist each list
@@ -737,6 +737,8 @@ dashed line at <span class="math inline"><em>λ</em></span> = 1 indicates
 stable population growth.</figcaption>
 </figure>
 
+### Sex Proportions and Lambda
+
 Tables 4 and 5 show the bootstrapped estimates of $\lambda_{boot}$ and
 proportion of males and females in the herd for each culling strategy.
 <img src="README_files/figure-gfm/Table4-lambda-theory-1.png" width="1605" />
@@ -815,6 +817,7 @@ xini.to.data.frame = function(repro, ageClasses, ages) {
 }
 
 xini.df = xini.to.data.frame(repro, ageClasses = ageClasses, ages = ages)
+  
 head(xini.df)
 ```
 
@@ -922,7 +925,7 @@ Run helper functions to gather results into a single data.frame
 tot.pop.res = lapply(results, function(r) {
   pop_summary2(r, sex = FALSE, interval = "year")
 })
-tot.pop.df = res.to.df(tot.pop.res)
+tot.pop.df = res.to.df(tot.pop.res) %>% facet_factor_fun()
 #-- uncomment to get results by sex
 # tot.pop.res.sex = lapply(results, function(r){pop.summary(r, sex = TRUE, interval = "year")})
 # tot.pop.df.sex = res.to.df(tot.pop.res.sex)
@@ -930,13 +933,13 @@ tot.pop.df = res.to.df(tot.pop.res)
 head(tot.pop.df)
 ```
 
-    ##   time       pop strategy Taxon
-    ## 1    1 150.00000   Energy  goat
-    ## 2    2 144.78844   Energy  goat
-    ## 3    3 117.97626   Energy  goat
-    ## 4    4  90.38717   Energy  goat
-    ## 5    5  84.26167   Energy  goat
-    ## 6    6  71.93883   Energy  goat
+    ##   time       pop strategy Taxon         Author
+    ## 1    1 150.00000   Energy  goat Redding (1981)
+    ## 2    2 144.78844   Energy  goat Redding (1981)
+    ## 3    3 117.97626   Energy  goat Redding (1981)
+    ## 4    4  90.38717   Energy  goat Redding (1981)
+    ## 5    5  84.26167   Energy  goat Redding (1981)
+    ## 6    6  71.93883   Energy  goat Redding (1981)
 
 ``` r
 # head(tot.pop.df.sex)
@@ -994,14 +997,17 @@ matrix.to.df = function(mat) {
 }
 ```
 
-Run replicated simulations
+Run replicated simulations save time by loading results from output
+folder.
 
 ``` r
 #-- set seed, number of replicates and cycles
 set.seed(1056)
-nbrep = 10
+# nbrep = 10
+nbrep = 100 # increase to 100 repetitions
 nbcycle = nbcycle
 
+system.time({
 #-- run simulation for all strategies
 stochastic.sim.res = replicate(n = nbrep,
                                lapply(param.props, function(p) {
@@ -1015,7 +1021,18 @@ stochastic.sim.res = replicate(n = nbrep,
                                  })
                                }),
                                simplify = "array")
+})
+```
 
+    ##    user  system elapsed 
+    ## 4100.56   84.32 4245.89
+
+``` r
+save(stochastic.sim.res, file = "output/stochastic_sim_res.RData")
+load(file = "output/stochastic_sim_res.RData")
+```
+
+``` r
 #-- create matrix, then df from results
 sto.res.mat = apply(stochastic.sim.res, 1, FUN = list.to.mat, simplify = F)
 sto.res.df = lapply(sto.res.mat, FUN = matrix.to.df)
@@ -1027,15 +1044,27 @@ sto.res.df$sheep$taxon = "sheep"
 #-- combine into one df
 sto.res.df = do.call(rbind.data.frame, sto.res.df)
 sto.res.df$strategy = factor(sto.res.df$strategy, levels = c(names(offtake.mortality)))
+
+#-- summarize dataframe helper, computes mean and confidence intervals for each strategy at each time step. Used for plotting
+summarize.pop.df = function(df) {
+  df %>%
+    group_by(taxon, strategy, time) %>%
+    summarise(
+      mean = mean(value),
+      low = quantile(value, 0.025),
+      up = quantile(value, 0.975)
+    )
+}
+rm(stochastic.sim.res)
 ```
 
 Plot the results of the replicated stochastic simulations.
 
-    ## Scale for colour is already present.
-    ## Adding another scale for colour, which will replace the existing scale.
+    ## `summarise()` has grouped output by 'taxon', 'strategy'. You can override using
+    ## the `.groups` argument.
 
 <figure>
-<img src="README_files/figure-gfm/Figure7-1.png"
+<img src="README_files/figure-gfm/Figure6-1.png"
 alt="Figure. S3.7. Plots showing results of replicated projections of change in sheep and goat herd sizes through time under the various survivorship profiles used." />
 <figcaption aria-hidden="true">Figure. S3.7. Plots showing results of
 replicated projections of change in sheep and goat herd sizes through
@@ -1133,14 +1162,25 @@ $\lambda \ge$ `high.threshold`.
 adjust.offtake = function(in.param,
                           low.threshold,
                           high.threshold,
-                          p0 = 150) {
+                          female.offtake = female.offtake,
+                          sensitivity.test = FALSE, # if TRUE, tests a range of female offtake rates for sensitivity test
+                          p0) {
   #-- calculate phi.opt
   phi.opt = optimize(f = get.off.adjust.poff,
                      param.ref = in.param,
                      interval = c(0, 5))$minimum
   
-  #-- get unadjusted female offtake
-  f.off = in.param$poff[in.param$sex == "F" & in.param$class > 0]
+  if(sensitivity.test) {
+    #-- get unadjusted male offtake
+    m.off = in.param$poff[in.param$sex == "M" & in.param$class > 0]
+  
+    #-- apply female offtake rate
+    f.off = m.off * (female.offtake/100)
+  } else {
+    #-- get unadjusted female offtake
+    f.off = in.param$poff[in.param$sex == "F" & in.param$class > 0]
+  }
+
   
   #-- extract tcla
   tcla1 = in.param[, c(1:5)]
@@ -1158,6 +1198,10 @@ adjust.offtake = function(in.param,
                     in.param$class > 0] = f.off * phi.opt
   } else {
     in.param$poff[in.param$sex == "F" & in.param$class > 0] = f.off
+  }
+  
+  if(sensitivity.test) {
+    in.param$p0 = p0
   }
   return(in.param)
 }
@@ -1183,7 +1227,8 @@ new.results = lapply(listpar, function(l) {
     l,
     FUN = adjust.offtake,
     low.threshold = Lambda.threshold.low,
-    high.threshold = Lambda.threshold.high
+    high.threshold = Lambda.threshold.high, 
+    p0 = p0
   )
   projectHerd2(listpar = l, p0 = p0)
 })
@@ -1201,7 +1246,7 @@ tot.pop.df$offtake = "unadjusted"
 new.pop.res.df$offtake = "adjusted"
 
 #-- merge into a single data.frame
-all.res.df = rbind.data.frame(tot.pop.df, new.pop.res.df)
+all.res.df = rbind.data.frame(tot.pop.df, new.pop.res.df %>% facet_factor_fun())
 ```
 
 <figure>
@@ -1308,14 +1353,14 @@ detect_valleys <- function(x, span = 3) {
 ```
 
 <figure>
-<img src="README_files/figure-gfm/Fig11-1.png"
+<img src="README_files/figure-gfm/Fig9-1.png"
 alt="Figure S3.11. Showing multiplication rates of unadjusted and adjusted offtake rates for goats" />
 <figcaption aria-hidden="true">Figure S3.11. Showing multiplication
 rates of unadjusted and adjusted offtake rates for goats</figcaption>
 </figure>
 
 <figure>
-<img src="README_files/figure-gfm/Fig12-1.png"
+<img src="README_files/figure-gfm/Fig10-1.png"
 alt="Figure S3.12. Showing multiplication rates of unadjusted and adjusted offtake rates for sheep" />
 <figcaption aria-hidden="true">Figure S3.12. Showing multiplication
 rates of unadjusted and adjusted offtake rates for sheep</figcaption>
@@ -1326,6 +1371,320 @@ rates of unadjusted and adjusted offtake rates for sheep</figcaption>
 A Levene’s Test for Equality of variances is used to assess whether
 there was a change in interannual variance of herd growth rates before
 and after culling rates were optimized.
+
+# Part IV - Sensitivity test
+
+Here we implement a Sobol’ sensitivity test to evaluate the sensitivity
+of the optimization algorithm to different initial herd sizes, herd
+growth rate thresholds, and female offtake rates.
+
+The parameter values are passed to the adjust.offtake function, which
+applies the optimization algorithm to adjust offtake rates based on the
+specified thresholds and initial herd size. The resulting adjusted
+parameters are then used to project the herd dynamics using
+projectHerd2(). The outputs of these projections are summarized to
+obtain mean population size, standard deviation of population size, time
+to extinction, and initial population size (p0). These outputs are
+returned as a data frame for each set of parameter values.
+
+We focus on the effects of these parameters on mean herd size over the
+200-year projection, as this is a key output of interest for
+understanding the long-term implications of modifying culling rates.
+Variance is also of interest, as it can indicate the stability of the
+herd under different parameter values. Time to extinction provides
+insights into the risk of herd collapse under different scenarios.
+Initial population size (p0) is included as a parameter in the
+sensitivity test to evaluate how sensitive the optimization algorithm is
+to changes in the starting conditions of the herd.
+
+``` r
+#-- sensitivity test needs to test the effects of the selected parameters on specific outputs.
+#-- first, we generate the range of parameters to test
+
+# #-- Parameter space is reduced for demonstration purposes. To reproduce full sensitivity test, increase `np` and `nboot.sens` values. Full sensitivity analysis can be executed on a HPC using the Rscript "XX_SENSITIVITY.R"
+
+# set.seed(123)
+
+# np=500
+# nboot.sens = 50
+# 
+# low.threshold.range = rnorm(mean = Lambda.threshold.low, sd = 0.01, n = np)
+# high.threshold.range = rnorm(mean = Lambda.threshold.high, sd = 0.01, n = np)
+# # p0.range = round(rnorm(mean=p0, sd=25, n=np))
+# female.offtake.range = rnorm(mean=female.offtake, sd=5, n=np)
+# 
+# # generate two examples of random number from parmeter distributions
+# 
+# X1 = cbind.data.frame(low.threshold.range, high.threshold.range, p0.range, female.offtake.range)
+# 
+# # repeat sampling
+# low.threshold.range = rnorm(mean = Lambda.threshold.low, sd = 0.01, n = np)
+# high.threshold.range = rnorm(mean = Lambda.threshold.high, sd = 0.01, n = np)
+# p0.range = round(rnorm(mean=p0, sd=25, n=np))
+# female.offtake.range = rnorm(mean=female.offtake, sd=5, n=np)
+# 
+# X2 = cbind.data.frame(low.threshold.range, high.threshold.range, p0.range, female.offtake.range)
+# 
+# #-- Create a dataframe containing the range of parameter values to test
+# sens_adjust_offtake = sensitivity::sobol2007(model = NULL, X1, X2, nboot = nboot.sens)
+# 
+# #-- run the model of all parameter values. 
+# 
+# #-- Wrapper function for parLapply to run sensitivity analysis for one set of parameters from listpar. This function is passed to parLapply to run the sensitivity analysis across multiple cores in parallel 
+# sensitivity_wrapper <- function(l, sens_adjust_offtake) {
+#   
+#   # Apply over all parameter combinations in sens_adjust_offtake$X
+#   tmp_res <- apply(sens_adjust_offtake$X, 1, function(params) {
+#     
+#     lt <- params[1]  # low.threshold
+#     ht <- params[2]  # high.threshold
+#     # p0s <- params[3] # p0
+#     fo <- params[4]  # female.offtake
+#     
+#     #-- get adjusted parameters based on optimization function with current sampled parameter values
+#     adjusted_params <- lapply(l, 
+#                               FUN = adjust.offtake,
+#                               low.threshold = lt,
+#                               high.threshold = ht,
+#                               p0 = p0,
+#                               female.offtake = fo,
+#                               sensitivity.test = TRUE)
+#     
+#     #-- Run projection
+#     tmp <- projectHerd2(listpar = adjusted_params, p0 = p0)
+#     
+#     #-- summarize results
+#     summary.df <- pop_summary2(tmp, sex = FALSE, interval = "year")
+#     
+#     # Return summary dataframe
+#     data.frame(
+#       mean.pop.size = mean(summary.df$pop),
+#       pop.sd = sd(summary.df$pop),
+#       time.to.extinct = summary.df$time[which(summary.df$pop == 0)[1]],
+#       # p0 = p0s,
+#       low.threshold = lt,
+#       high.threshold = ht,
+#       female.offtake = fo
+#     )
+#   })
+#   
+#   # Combine results
+#   do.call(rbind.data.frame, tmp_res)
+# }
+# 
+# #-- helper function to extract sobol indices
+# extract_indices = function(sobol_obj){
+#   interactions = sobol_obj$T[,1] - sobol_obj$S[,1]
+#   data.frame(
+#     param = rownames(sobol_obj$S),
+#     main_effect = sobol_obj$S[,1],
+#     main_effect_low = sobol_obj$S[,4],
+#     main_effect_high = sobol_obj$S[,5],
+#     total_effect = sobol_obj$T[,1],
+#     total_effect_low = sobol_obj$T[,4],
+#     total_effect_high = sobol_obj$T[,5],
+#     interactions = interactions
+#   )
+# }
+# 
+# system.time({
+# #-- Set up parallel processing
+# cl <- makeCluster(detectCores() - 1) # leave one core free
+# #-- load necessary libraries on each cluster node
+# clusterEvalQ(cl, {
+#   library(sensitivity)
+#   library(boot)
+#   library(HerdDynamics)
+#   library(dplyr)
+#   library(tidyr)
+#   library(stringr)
+# })
+# 
+# #-- export necessary functions and variables to cluster nodes
+# clusterExport(cl, varlist = c("adjust.offtake", "get.off.adjust.poff", "projectHerd2", "pop_summary2", "sens_adjust_offtake"))
+# 
+# #-- run sensitivity analysis in parallel across all sets of parameters for Meat, Milk, and Wool models for sheep and goats
+# Sensitivity_results <- parLapply(cl, listpar[c(3:5, 19:21)], sensitivity_wrapper, sens_adjust_offtake)
+# 
+# #-- tell sensitivity object about results for each parameter set. This will allow us to calculate sensitivity indices for each output variable (mean population size, population standard deviation, time to extinction) with respect to the input parameters (low.threshold, high.threshold, initial population and female offtake rate).
+#   sens_adjust_offtake_sobol.pop.size = lapply(Sensitivity_results, function(s){
+#     sensitivity::tell(sens_adjust_offtake, s$mean.pop.size)
+#   })
+#   
+#   sens_adjust_offtake_sobol.pop.sd = lapply(Sensitivity_results, function(s){
+#     sensitivity::tell(sens_adjust_offtake, s$pop.sd)
+#   })
+#   # 
+#   # sens_adjust_offtake_sobol.extinct = lapply(Sensitivity_results, function(s){
+#   #   sensitivity::tell(sens_adjust_offtake, s$time.to.extinct)
+#   # })
+#   
+#   sobol_res = list(
+#     pop.size = sens_adjust_offtake_sobol.pop.size,
+#     pop.sd = sens_adjust_offtake_sobol.pop.sd
+#     # time.to.extinct = sens_adjust_offtake_sobol.extinct
+#   )
+#   #-- send to data.frame
+#   sobol_indices = lapply(sobol_res, function(s) {
+#     s = unlist(s, recursive = F)
+#     do.call(rbind.data.frame, lapply(s, extract_indices)) %>%  
+#       mutate(
+#       res = str_split_i(rownames(.), "\\.", 2),
+#       taxon = str_split_i(rownames(.), "\\.", 3),
+#       strategy = str_split_i(rownames(.), "\\.", 4)
+#     ) 
+#   })
+#   
+#   sobol_indices <- lapply(sobol_indices, function(s) {
+#     rownames(s) <- NULL
+#     return(s)
+#   })
+#   names(sobol_res) <- names(listpar)
+# #-- clean up cluster
+# stopCluster(cl)
+# })
+
+#-- save results
+# saveRDS(sobol_res, file = "./output/sobol_sensitivity_results.rds")
+# saveRDS(sobol_indices, file = "./output/sobol_indices_df.rds")
+```
+
+``` r
+param_labels <- c(
+  "female.offtake.range"  = "Female offtake rate (%)",
+  "high.threshold.range"  = expression(High~lambda~threshold),
+  "low.threshold.range"   = expression(Low~lambda~threshold),
+  "p0.range"              = "Initial population (p0)"
+)
+
+#-- Fig 11 grid
+fig11.design = matrix(c(
+  1, 2,
+  3, 4,
+  5, 6 ), nrow = 3, byrow = TRUE )
+
+Fig11 <- sobol_indices %>%
+  facet_factor_fun() %>% 
+  mutate(res = factor(res, levels = c("size", "sd"))) %>% 
+  ggplot(aes(group = taxon, colour = param)) +
+  geom_point(
+    # aes(shape = taxon, x = param, y = total_effect),
+    aes(shape = taxon, x = param, y = main_effect),
+    position = position_dodge(width = 0.8), 
+    size = 2,
+    alpha = 0.6
+  ) +
+  geom_errorbar(
+    aes(x = param, 
+        # ymin = total_effect_low, ymax = total_effect_high
+        ymin = main_effect_low, ymax = main_effect_high
+        ),
+    position = position_dodge(width = 0.8),
+    width = 0.4) +
+  xlab("Sensitivity index") +
+  ylab("Main effect on Herd Size") +
+  scale_color_manual(
+    values = scales::hue_pal()(length(param_labels)),
+    breaks = names(param_labels),
+    labels = param_labels 
+  ) +
+  theme_minimal() +
+  facet_manual(
+    facets = vars( strategy, res),
+    design = fig11.design,
+    strip = strip_nested(),
+    # scales = "free_y"
+    ) +
+  theme(
+    axis.title = element_text(size = 8),
+    axis.text.x = element_blank(), # element_text(hjust = 1, size = 6),
+    axis.text.y = element_text(size = 8),
+    line = element_line(linewidth = 0.2),
+    # legend.position = "inside",
+    legend.position.inside = c(0.8, 0.3), 
+    legend.title = element_blank(),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "white", color = "grey60"),
+    panel.spacing = unit(0.2, "lines"),
+    guides(colour = guide_legend(override.aes = list(linetype = 0)),
+           shape  = guide_legend(override.aes = list(linetype = 0)))
+  )
+  
+Fig11
+```
+
+![](README_files/figure-gfm/Fig11%20-%20plot%20total%20effect%20indices-1.png)<!-- -->
+
+``` r
+# save Fig 11
+# ggsave(
+#   plot =  Fig11 , filename = "./Figures/Fig11_Sobol_Main_Effects.jpg",
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
+```
+
+``` r
+Fig12 <- sobol_indices %>%
+  facet_factor_fun() %>% 
+  mutate(res = factor(res, levels = c("size", "sd"))) %>% 
+  # filter(param != "female.offtake.range") %>% 
+  ggplot(aes(group = taxon, colour = param)) +
+  geom_point(
+    aes(shape = taxon, x = param, y = total_effect),
+    # aes(shape = taxon, x = param, y = main_effect),
+    position = position_dodge(width = 0.8), 
+    size = 2,
+    alpha = 0.6
+  ) +
+  geom_errorbar(
+    aes(x = param, ymin = total_effect_low, ymax = total_effect_high),
+    position = position_dodge(width = 0.8),
+    width = 0.4) +
+  xlab("Sensitivity index") +
+  ylab("Total effect on Herd Size") +
+  scale_color_manual(
+    values = scales::hue_pal()(length(param_labels)),
+    breaks = names(param_labels),
+    labels = param_labels 
+  ) +
+  theme_minimal() +
+  facet_manual(
+    facets = vars( strategy, res),
+    design = fig11.design,
+    strip = strip_nested(),
+    # scales = "free_y"
+    ) +
+  theme(
+    axis.title = element_text(size = 8),
+    axis.text.x = element_blank(), # element_text(hjust = 1, size = 6),
+    axis.text.y = element_text(size = 8),
+    line = element_line(linewidth = 0.2),
+    # legend.position = "inside",
+    legend.position.inside = c(0.8, 0.3), 
+    legend.title = element_blank(),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "white", color = "grey60"),
+    panel.spacing = unit(0.2, "lines"),
+    guides(colour = guide_legend(override.aes = list(linetype = 0)),
+           shape  = guide_legend(override.aes = list(linetype = 0)))
+  )
+Fig12
+```
+
+![](README_files/figure-gfm/Fig12%20plot%20total%20effect%20indices-1.png)<!-- -->
+
+``` r
+# save Fig 12
+# ggsave(
+#   plot =  Fig12 ,
+#   filename = "./Figures/Fig12_Sobol_Total_effects.jpg",
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
+```
 
 # References
 

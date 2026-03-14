@@ -2157,7 +2157,7 @@ T7 = sobol_indices %>%
   # theme_vanilla()
   
 T7
-save_as_docx(T6, path = "./tables/Table7_Sensitivity_Main_Effects.docx", pr_section = sect_properties)
+save_as_docx(T7, path = "./tables/Table7_Sensitivity_Main_Effects.docx", pr_section = sect_properties)
 
 ```
 
