@@ -18,7 +18,7 @@ This document outlines the procedures used to simulate goat and sheep herd dynam
 knitr::opts_chunk$set(echo = TRUE)
 
 # install.packages("devtools")
-devtools::install_github("penguinnick/HerdDynamics")
+# devtools::install_github("penguinnick/HerdDynamics")
 library(HerdDynamics)
 library(dplyr)
 library(tidyr)
@@ -29,7 +29,9 @@ library(stringr)
 library(rcartocolor)
 library(officer)
 library(ggplot2)
+library(ggh4x)
 library(car)
+library(parallel)
 # using( "tidyverse", "mmage", "rcartocolor", "flextable", "officer", "boot", "zoo", "FSA", "car")
 ```
 
@@ -80,22 +82,24 @@ tcla
 Calling `HerdDynamics::offtake_models` gives a list of survivorship probabilities standardized across nine age classes by Marom and Bar-Oz [-@Marom2009] for Redding's [-@Redding1981] **Energy** and **Security**,  Payne's [-@Payne1973] **Meat**, **Milk**, and **Wool** strategies, and Vigne and Helmer's [-@Vigne2007] Meat and Milk types A and B (**MeatA**, **MeatB**, **MilkA**, **MilkB**) and **Fleece** strategies.
 
 ```{r, theoretical-offtake-models, include=TRUE, eval=TRUE, fig.dim=c(6 , 4), fig.cap="Figure S3.1. Survivorship curves for threoretical culling strategies."}
-HerdDynamics::culling_multiplot(HerdDynamics::offtake_models)
+# HerdDynamics::culling_multiplot(HerdDynamics::offtake_models)
+source("./R/culling_multiplot2.R")
+culling_multiplot2(offtake_models)
 ```
 
 ```{r, save-fig1, include=FALSE}
-ggsave(
-  plot = HerdDynamics::culling_multiplot(HerdDynamics::offtake_models),
-  "Figures/Fig1_TheoreticalCullingStrategies.jpg",
-  dpi = 300,
-  width = 6,
-  height = 4
-)
+# ggsave(
+#   # plot = HerdDynamics::culling_multiplot(HerdDynamics::offtake_models),
+#   plot = culling_multiplot2(offtake_models),
+#   "Figures/Fig1_TheoreticalCullingStrategies_v2.jpg",
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
 
 ```
 
 ```{r, theoretical-survivorship-table, echo=FALSE, include=FALSE} 
-#, include=FALSE, eval=TRUE, results="hide"}
 T2 = cbind.data.frame(c("", Payne_ages$ageClasses) ,
                       do.call(cbind.data.frame, args = c(offtake_models)))
 colnames(T2)[1] = "Age Class" # = ageClasses # c(0, ages)
@@ -150,7 +154,6 @@ T2ft = flextable(T2[-1, ]) %>%
     "Table 2. Percentage of herd predicted to survive under ten theoretical culling strategies associated with different production strategies, as presented by Marom and Bar-Oz (2009a). Survival probabilities derived from aRedding (1981), bPayne (1973), and cVigne and Helmer (2007) correspond to Payne's age class system."
   )
 
-
 #-- properties for word doc output
 sect_properties <- prop_section(
   page_size = page_size(
@@ -166,9 +169,7 @@ sect_properties <- prop_section(
 getwd()
 
 #-- create output word doc
-save_as_docx(T2ft, path = "tables/Table2_survival_rates.docx", pr_section = sect_properties)
-# T2ft  
-# rm(T2, T2ft)
+# save_as_docx(T2ft, path = "tables/Table2_survival_rates.docx", pr_section = sect_properties)
 ```
 
 ```{r, T2, echo=FALSE}
@@ -211,6 +212,7 @@ cprof <- lapply(wear.df.list, function(w){
   t$s[9] = HI
   list(t = t, culling.profile =  c(100, t$s * 100))
 })
+
 cprof <- lapply(cprof, function(x){
   x$culling.profile})
 
@@ -218,162 +220,63 @@ culling.profiles <- cprof
 # rm(wear.df, wear.df.list, ages.list, l.names)
 ```
 
+
 ```{r, Figure2, include=FALSE}
 #-- save Figure 2 with archaeological survivorship curves
 #-- use HerdDynamics functions to calculate survivorship from age-at-death data
 ages.list = lapply(wear.df.list, function(a) {
-  # adjusts counts for each age group where multiple age groups are listed,
-  # t = correct.counts(a$Payne.Group, probability.correction = FALSE);
+  # adjusts counts for each age group where multiple age groups are listed and returns frequency density
   t = correct.counts(a$Payne.Group, probability.correction = TRUE)
   
   # calculates survivorship
   cbind.data.frame(t, s = survivorship(t$n))
 })
 
-#-- return to dataframe for plotting
-ages.df.correct <- bind_rows(ages.list, .id = "Site_Period") %>%
-  mutate(
-    Freq.Dens = fd,
-    Age = case_when(
-      # add ages in months to age classes
-      v == "A" ~ "0-2m",
-      v == "B" ~ "2-6m",
-      v == "C" ~ "6-12m",
-      v == "D" ~ "12-24m",
-      v == "EF" ~ "24-48m",
-      v == "G" ~ "48-72m",
-      v == "HI" ~ ">72m"
-    )
-  ) %>%
-  mutate(Age = paste0(v, " (", Age, ")")) %>%
-  group_by(Site_Period) %>%
-  mutate(
-    # calculate percent of cumulative frequency density
-    fd.percent = Freq.Dens / sum(Freq.Dens)
-  ) %>%
-  mutate(
-    # factor site-period field
-    Site_Period = factor(
-      Site_Period,
-      levels = c(
-        # "Crno Vrilo (Sierra) EN",
-        "Smilčić EN" ,
-        "Smilčić MN",
-        "Benkovac-Barice MN",
-        "Zemunik Donji MN",
-        "Islam Grčki MN",
-        "Islam Grčki LN"
-      ) ,
-      labels = c(
-        # "Crno Vrilo (Impresso)",
-        "Smilčić (Impresso)",
-        "Smilčić (Danilo)",
-        "Benkovac-Barice (Danilo)",
-        "Zemunik Donji (Danilo)",
-        "Islam Grčki (Danilo)",
-        "Islam Grčki (Hvar)"
-      )
-    )
-  )
+# new function for plotting histograms with unequal binwidths (classic mortality profile)
+source("./R/mortality_histogram_gg.R")
 
-#-- create strip labels for facets
-strip.labeller = ages.df.correct %>%
-  filter(!is.na(Site_Period)) %>%
-  mutate(
-    strat.lab = case_when(
-      str_detect(Site_Period, "Benko") ~ paste0(Site_Period, " \n Milk A/B + Meat B"),
-      Site_Period == "Islam Grčki (Hvar)" ~ paste0("Graduša Lokve \n Meat B + Fleece"),
-      Site_Period == "Islam Grčki (Danilo)" ~ paste0("Graduša Lokve- \n", Site_Period, " Milk A"),
-      Site_Period == "Smilčić (Impresso)" ~ paste0(Site_Period, " \n Milk B + Meat B"),
-      Site_Period == "Smilčić (Danilo)" ~ paste0(Site_Period, " \n Milk A/B + Meat B"),
-      str_detect(Site_Period, "Zemunik") ~ paste0(Site_Period, " \n Milk B + Meat B")
-    )
-  ) %>%
-  select(Site_Period, strat.lab) %>% unique() %>% arrange(Site_Period)
+mort.plots = lapply(ages.list, function(a){mortality.histogram.gg(a$n)})
+# rearrange plots
+mort.plots = c(mort.plots[3], mort.plots[4], mort.plots[1], mort.plots[2], mort.plots[5])
 
-strip_labels = setNames(c(strip.labeller$strat.lab), c(strip.labeller$Site_Period))
+# Fig2
+Fig2 = cowplot::plot_grid(plotlist = mort.plots, labels = names(mort.plots), 
+                          label_size = 10, 
+                          vjust = 1.5, hjust = c(-1.5, -1.5, -0.75, -0.75, -0.75))
+# ggsave(
+#   plot = Fig2,
+#   filename = "Figures/Fig2_ArchaeologicalMortProfiles_v2.jpg",
+#   dpi = 300,
+#   width = 8,
+#   height = 4
+# )
 
-#-- create dataframe of Meat and Milk survivorship curves for plotting
-strategies <- c("Meat", "Milk", "Milk B", "Milk A", "Meat B")
 
-lx_values <- list(
-  Meat   = c(85, 75, 70, 50, 30, 22, 10),
-  Milk   = c(47, 42, 39, 35, 28, 18, 10),
-  `Milk B` = c(83, 50, 36, 18, 6, 1, 1),
-  `Milk A` = c(22, 11, 4, 3, 2, 1, 1),
-  `Meat B` = c(86, 68, 28, 6, 1, 1, 1)
-)
-
-MilkMeatModels <- data.frame(
-  Age = rep(unique(ages.df.correct$Age), times = length(strategies)),
-  strategy = rep(strategies, each = length(unique(ages.df.correct$Age))),
-  lx = unlist(lx_values, use.names = FALSE)
-)
-
-#-- Create Figure 2
-Fig2 <- ages.df.correct  %>%
-  ggplot() +
-  geom_line(
-    data = MilkMeatModels %>% filter(strategy == "Milk B" |
-                                       strategy == "Milk A" | strategy == "Meat B") %>% mutate(lx = lx / 100),
-    aes(
-      group = strategy,
-      x = Age,
-      y = lx,
-      linetype = strategy
-    ),
-    alpha = 0.5
-  ) +
-  scale_linetype_manual(
-    values = c("twodash", "dotted", "dashed"),
-    breaks = c("Milk A", "Milk B", "Meat B"),
-    # breaks = c("Meat", "Milk"),
-    name = "Strategy"
-  ) +
-  geom_col(data = ages.df.correct, aes(x = Age, y = fd.percent), alpha =
-             0.8, ) +
-  geom_line(
-    data = ages.df.correct,
-    aes(group = Site_Period, x = Age, y = s),
-    alpha = 0.5,
-    linewidth = 1,
-    colour = "#2b8cbe"
-  ) +
-  geom_text(
-    data = ages.df.correct,
-    aes(
-      x = Age,
-      y = fd.percent,
-      label = paste0(round(fd.percent * 100), "%")
-    ),
-    size = 3,
-    vjust = -0.5
-  ) +
-  ylab("Percent Cumulative Frequency Distribution") + xlab("Age Class") +
-  theme_minimal() +
-  facet_wrap( ~ Site_Period, labeller = as_labeller(strip_labels, multi_line = TRUE)) +
-  theme(
-    axis.text.x = element_text(
-      angle = 45,
-      hjust = 1,
-      size = 6
-    ),
-    strip.background = element_rect(fill = "#d9d9d980"),
-    strip.text = element_text(size = 8),
-    legend.position = "bottom"
-  )
-
-ggsave(
-  plot = Fig2,
-  filename = "Figures/Fig2_ArchaeologicalCullingStrategies.jpg",
-  dpi = 300,
-  width = 6,
-  height = 4
-)
 ```
 
-```{r, plotFig2, echo=FALSE, fig.dim=c(6 , 4), fig.cap="Figure 2. Survivorship curves for archaeological culling strategies."}
+```{r, plotFig2, echo=FALSE, fig.dim=c(8 , 4), fig.cap="Figure 2. Archaeological mortality profiles."}
 Fig2
+```
+### Supplementary Table S4.1: Mandible sample information
+```{r, TableS4, echo=FALSE, include=TRUE}
+TableS4.1 <- wear.df %>% 
+  filter(Payne.Group != "") %>%
+  # mutate(N=n()) %>% 
+  group_by(Site, Period, Species) %>%
+  reframe(N = n()) %>%
+  pivot_wider(names_from = Species, values_from = N) %>% 
+  group_by(Site, Period) %>%
+  reframe(Site, Period, #N,
+          N = sum(CA, OA, OC),
+          "Goat:Sheep:Indeterminate" = paste0(CA, ":", OA, ":", OC)) %>% 
+  as_flextable() %>%
+  set_caption("Table S4. Sample information for mandibles used to calculate age-at-death distributions for ovicaprids at four Neolithic sites in Dalmatia.") %>% 
+  theme_vanilla()
+
+TableS4.1
+  
+#-- create output word doc
+# save_as_docx(TableS4.1, path = "tables/TableS4-1_mandible_counts.docx", pr_section = sect_properties)
 ```
 
 ```{r, Table-3-site-survivorship, echo=FALSE, include=FALSE}
@@ -400,7 +303,7 @@ T3ft = flextable(T3[-1, ]) %>%
 
 T3ft = T3ft %>% set_caption("Table 3. Survival probabilities for caprines at four Neolithic Sites in Dalmatia.")
 
-save_as_docx(T3ft, path = "tables/Table3_Site_survival_rates.docx", pr_section = sect_properties)
+# save_as_docx(T3ft, path = "tables/Table3_Site_survival_rates.docx", pr_section = sect_properties)
 
 # rm(T3, T3ft)
 ```
@@ -460,7 +363,7 @@ Using the mortality and prolificacy data called in the previous chunk two lists 
 
 The above function is used in this chunk to generate a series of prolificacy rates based on fertility data. Also defined is the function `Part.rate` which calculates $ARR$.
 ```{r, ARR, echo=TRUE}
-#-- function to calculate annual reproduction rate (ARR), included in HerdDynamics package 
+#-- function to calculate annual reproduction rate (ARR), included in HerdDynamics package
 ARR = function(mean_litter_size, parturition_interval) {
   (mean_litter_size * 365) / parturition_interval
 }
@@ -476,7 +379,7 @@ get_mortality <- function(taxon, sex) {
 
 #-- Ages, parturition interval, and age of first parturition set here
 ages = HerdDynamics::Payne_ages$ages  # unique(param.dat$Age)
-parturition.Interval = 300 
+parturition.Interval = 300 # 300 days between births
 part.age = 2
 
 
@@ -586,7 +489,7 @@ t1 %>% set_caption(
   "Table 1. Parameters used to construct the Lefkovitch population projection matrix for sheep and goats. Parturition and prolificacy rates one possible outcome of the sampling procedure."
 )
 #-- create output word doc
-save_as_docx(t1, path = "./tables/Table1_parameters.docx", pr_section = sect_properties)
+# save_as_docx(t1, path = "./tables/Table1_parameters.docx", pr_section = sect_properties)
 # rm(t1)
 
 ```
@@ -616,7 +519,7 @@ Next, a list named `param.props` containing all the  parameters defined above, t
 
 ```{r, CombineParams, echo=TRUE}
 #-- This number is used to account for culling of females due to infertility. If Null, no female offtake assumed.
-female.offtake = 15
+female.offtake = 15 # percentage of culling rate applied to females
 
 sheep.param.props = list(
   tcla = tcla,
@@ -710,9 +613,10 @@ param = lapply(param.props, function(p) {
 
 str(param$goat$Energy$param)
 ```
-```{r, clean-up, include=FALSE}
-rm(sheep.param.props, goat.param.props, Baseline.offtake)
 
+```{r, clean-up, include=FALSE}
+# rm(sheep.param.props, goat.param.props, Baseline.offtake)
+# gc()
 ```
 
 The example above creates a list of parameter tables for each offtake strategy for both goats and sheep with varying fertility and mortality parameters for a single year. In the next part, these tables will be used to simulate environmental variation over multiple years.
@@ -760,6 +664,7 @@ set.seed(600)
 nbcycle = 200
 p0 = 150
 
+system.time({
 #-- uncomment lines below to re-create simulation environment or use existing by loading from data folder
 listpar = lapply(param.props, function(p) {
   make.listpar(
@@ -767,6 +672,7 @@ listpar = lapply(param.props, function(p) {
     nbcycle = nbcycle,
     offtake.mortality = offtake.mortality
   )
+})
 })
 
 #-- save stochastic environment to replicate results
@@ -803,9 +709,12 @@ wrapper.repro = function(listpar, out = c("lambda", "sex")) {
   })
 }
 
-#-- put all lambda and female proportions in lists
+system.time({
+  #-- put all lambda and female proportions in lists
 lambda.list = wrapper.repro(listpar, out = "lambda")
 sex.prop.list = wrapper.repro(listpar, out = "sex")
+})
+
 #-- assign names to each list
 names(lambda.list) <- names(sex.prop.list) <- names(listpar)
 #-- unlist each list
@@ -883,11 +792,42 @@ write.table(repro.boot.df, file = "output/reproboot.csv", sep = ",")
 # rm(lambda.list, sex.prop.list, sex.prop.boot.df)
 ```
 
+```{r, Load-reproboot-results, include=FALSE}
+repro.boot.df <-  read.table("output/reproboot.csv", header = T, sep = ",")
+```
+
+```{r, facet_manual_helper_function, echo=FALSE, include=FALSE}
+facet_factor_fun <- function(dat){
+  dat %>% mutate(Author = case_when(
+      strategy %in% c("Security", "Energy") ~ "Redding (1981)",
+      strategy %in% c("Meat", "Milk", "Wool") ~ "Payne (1973)",
+      strategy %in% c("MeatA", "MeatB", "MilkA", "MilkB", "Fleece") ~ "Vigne and Helmer (2007)",
+      strategy == "Baseline" ~ "No Offtake",
+      .default = "Neolithic" )) %>%
+  mutate(
+    Author = factor(Author, levels = c( "Vigne and Helmer (2007)", "Payne (1973)", "Redding (1981)",
+                                        "Neolithic", "No Offtake" )),
+    strategy = factor(strategy, levels = c(names(offtake.mortality)[6:10], 
+                                           names(offtake.mortality)[3:5],
+                                           names(offtake.mortality)[1:2],
+                                           "Smilčić EN", "Smilčić MN", "Benkovac-Barice MN",
+                                           "Islam Grčki MN", "Zemunik Donji MN", "Baseline"
+                                           )))
+} 
+
+
+```
+
+
 ```{r lambda-plot, echo=FALSE, fig.dim=c(6 , 4), fig.cap="Figure S3.3. Bootstrapped estimates of lambda ($\\lambda_{boot}$) for each culling strategy showing 95% confidence intervals. A horizontal dashed line at $\\lambda$ = 1 indicates stable population growth." }
 #-- Plot bootstrapped lambda results
-Fig3 = repro.boot.df %>%
-  mutate(strategy = factor(strategy, levels = repro.boot.df$strategy[1:16])) %>%
+Fig3 = repro.boot.df %>% facet_factor_fun() %>% 
+  # mutate(strategy = factor(strategy, levels = repro.boot.df$strategy[1:16])) %>%
   ggplot(aes(x = strategy, y = Lambda, color = Taxon)) +
+  # ggplot(aes(y = strategy, x = Lambda, color = Taxon)) +
+  # geom_vline(xintercept = 1,
+  #            linetype = "dashed",
+  #            color = cbPalette[10]) +
   geom_hline(yintercept = 1,
              linetype = "dashed",
              color = cbPalette[10]) +
@@ -904,18 +844,15 @@ Fig3 = repro.boot.df %>%
 Fig3
 
 #-- save figure
-ggsave(
-  Fig3,
-  filename = "./Figures/Fig3_lambda-boot.jpg",
-  dpi = 300,
-  width = 6,
-  height = 4
-)
+# ggsave(
+#   Fig3,
+#   filename = "./Figures/Fig3_lambda-boot_v2.jpg",
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
 ```
 
-```{r, Loadreproboot-results, include=FALSE}
-repro.boot.df = read.table("output/reproboot.csv", header = T, sep = ",")
-```
 
 
 ```{r, Lambda-Boot-Table, include=FALSE}
@@ -986,11 +923,12 @@ sect_properties <- prop_section(
 )
 
 #-- create output word doc
-save_as_docx(t4, path = "tables/Table4_lambda_theory.docx", pr_section = sect_properties)
-save_as_docx(t5, path = "tables/Table5_lambda_culling.docx", pr_section = sect_properties)
+# save_as_docx(t4, path = "tables/Table4_lambda_theory.docx", pr_section = sect_properties)
+# save_as_docx(t5, path = "tables/Table5_lambda_culling.docx", pr_section = sect_properties)
 
 ```
 
+### Sex Proportions and Lambda
 Tables 4 and 5 show the bootstrapped estimates of $\lambda_{boot}$ and proportion of males and females in the herd for each culling strategy.
 ```{r, Table4-lambda-theory, echo=FALSE}
 t4
@@ -1046,24 +984,33 @@ strip_labels = setNames(c(strip.labeller$lambda.lab), c(strip.labeller$strategy)
 
 ```{r, plot-sex-proportion, echo=FALSE, fig.dim=c(6 , 4), fig.cap="Figure S3.4. Proportion of females and males for each strategy"  }
 #-- This chunk creates a plot showing the proportion of females and males in the herd based on the bootstrapped estimates of sex proportions.
-repro.boot.df %>%
-  select(Taxon, strategy, Lambda, `Proportion Female`, `Proportion Male`) %>%
-  # select(Taxon, strategy, Lambda, Proportion.Female, Proportion.Male) %>%
+design <- matrix(c(
+  11, 12, 13, 14, 15,
+  1, 2, 3, 4, 5,
+  6, 7, 8, NA, NA,
+  9, 10, 16, NA, NA
+    ), nrow = 4, byrow = TRUE )
+
+repro.boot.df %>% facet_factor_fun() %>% 
+  select(Taxon, strategy, Lambda, `Proportion Female`, `Proportion Male`, Author) %>%
   pivot_longer(cols = c(4, 5)) %>%
   mutate(
     Lambda = round(Lambda, 3),
-    # Sex = case_when(name == "Proportion.Female" ~ "F",
-    # name == "Proportion.Male" ~ "M"),
-    Sex = case_when(name == "Proportion Female" ~ "F", name == "Proportion Male" ~ "M"),
-    strategy = factor(strategy, levels = c(names(offtake.mortality)))
+    Sex = case_when(name == "Proportion Female" ~ "Female", name == "Proportion Male" ~ "Male"),
   ) %>%
   mutate(Strat = paste0(strategy, " (λ=", Lambda, ")")) %>%
   ggplot() +
-  geom_col(aes(x = Sex, y = value, fill = Taxon), position = "dodge") +
+  geom_col(aes(x = Taxon, y = value, fill = Sex), position = "dodge") +
   ylab("Proportion") +
   scale_fill_manual(values = cbPalette) +
   theme_minimal()  +
-  facet_wrap(~ strategy , labeller = as_labeller(strip_labels))
+  facet_manual(facets = vars(Author, strategy), design = design, strip = strip_nested()) +
+  theme(
+    legend.position =  "inside", 
+    legend.position.inside = c(0.8, 0.3), 
+    legend.title = element_blank(), 
+    axis.text.x = element_text(size = 8))
+  # facet_wrap(~ strategy , labeller = as_labeller(strip_labels))
 ```
 
 ## Herd Structure
@@ -1115,13 +1062,16 @@ xini.to.data.frame = function(repro, ageClasses, ages) {
 }
 
 xini.df = xini.to.data.frame(repro, ageClasses = ageClasses, ages = ages)
+  
 head(xini.df)
 ```
 
 Plot herd structure for each culling strategy showing number of animals in each age class for goats and sheep.
 ```{r Figure4, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure S3.5. Herd structure for each culling strategy showing number of animals in each age class for goats and sheep." }
 #-- This chunk creates Figure 4 in the article, showing herd structure for each strategy
-Fig4 = xini.df %>% filter(n > 0) %>%
+
+Fig4 = xini.df %>% facet_factor_fun() %>% 
+  filter(n > 0) %>%
   ggplot() +
   # geom_col( aes( x = AgeClass, y = n, fill = Taxon ), position = "dodge" ) +
   geom_col(aes(x = Age, y = n, fill = Taxon), position = "dodge") +
@@ -1130,21 +1080,27 @@ Fig4 = xini.df %>% filter(n > 0) %>%
   xlab("Age (years)") +
   ylab("Number of Animals") +
   # scale_y_continuous( breaks = c(0, 25, 50)) +
+  facet_manual(facets = vars(Author, strategy), design = design, strip = strip_nested()) +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(hjust = 1, size = 8),
-    axis.text.y = element_text(size = 8),
+    axis.title = element_text(size = 8),
+    axis.text.x = element_text(hjust = 1, size = 6),
+    axis.text.y = element_text(size = 6),
     line = element_line(linewidth = 0.2),
-    legend.position = "bottom"
-  ) +
-  facet_wrap(~ strategy, labeller = as_labeller(strip_labels)) #  strip_labeller )
+    legend.position = "inside",
+    legend.position.inside = c(0.8, 0.3), 
+    legend.title = element_blank(),
+    strip.text = element_text(size = 6),
+    strip.background = element_rect(fill = "white", color = "grey60"),
+    panel.spacing = unit(0.2, "lines")
+  ) 
 
 Fig4
-ggsave("Figures/Fig4_herd_structure.jpg",
-       Fig4,
-       dpi = 300,
-       width = 6,
-       height = 4)
+# ggsave("Figures/Fig4_herd_structure_v2.jpg",
+#        Fig4,
+#        dpi = 300,
+#        width = 6,
+#        height = 4)
 ```
 
 # Part III - Population Projection
@@ -1217,7 +1173,7 @@ Run helper functions to gather results into a single data.frame
 tot.pop.res = lapply(results, function(r) {
   pop_summary2(r, sex = FALSE, interval = "year")
 })
-tot.pop.df = res.to.df(tot.pop.res)
+tot.pop.df = res.to.df(tot.pop.res) %>% facet_factor_fun()
 #-- uncomment to get results by sex
 # tot.pop.res.sex = lapply(results, function(r){pop.summary(r, sex = TRUE, interval = "year")})
 # tot.pop.df.sex = res.to.df(tot.pop.res.sex)
@@ -1228,12 +1184,10 @@ head(tot.pop.df)
 
 
 ```{r, Fig6, echo=FALSE, warning=FALSE, fig.dim=c(6,4), fig.cap="Figure. S3.6. Plots showing the change in sheep and goat herd sizes through time under the various culling strategies used. " }
-
-
 #-- plot
 Fig5 = tot.pop.df %>%
   mutate(Taxon = factor(Taxon, levels = c("goat", "sheep"))) %>%
-  mutate(strategy = factor(strategy, levels = c(names(offtake.mortality))))  %>%
+  facet_factor_fun() %>% 
   ggplot() +
   geom_col(aes(time, pop, fill = Taxon), alpha = 0.8) +
   scale_fill_manual(
@@ -1242,26 +1196,34 @@ Fig5 = tot.pop.df %>%
     labels = c("Goat", "Sheep")
   ) +
   labs(x = "Time (years)", y = "Number of animals") +
-  facet_wrap(~ strategy,
-             labeller = as_labeller(strip_labels),
-             scales = "free_y") +
+  facet_manual(
+    facets = vars(Author, strategy), 
+    design = design, 
+    strip = strip_nested(),
+    scales = "free_y") +
   theme_minimal() +
   theme(
-    legend.position = "bottom",
+    axis.title = element_text(size = 8),
+    axis.text.x = element_text(hjust = 1, size = 6),
+    axis.text.y = element_text(size = 6),
     line = element_line(linewidth = 0.2),
-    axis.text = element_text(size = 6),
-    strip.text = element_text(size = 8)
-  )
+    legend.position = "inside",
+    legend.position.inside = c(0.8, 0.3), 
+    legend.title = element_blank(),
+    strip.text = element_text(size = 6),
+    strip.background = element_rect(fill = "white", color = "grey60"),
+    panel.spacing = unit(0.2, "lines")
+  ) 
 
 Fig5
-
-ggsave(
-  "Figures/Fig5_projections.jpg",
-  plot =  Fig5,
-  dpi = 300,
-  width = 6,
-  height = 4
-)
+# 
+# ggsave(
+#   "Figures/Fig5_projections_v2.jpg",
+#   plot =  Fig5,
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
 
 ```
 
@@ -1271,6 +1233,7 @@ Since there is an element of stochastic variation, it is useful to examine multi
 
 To do this, we define a wrapper function, `stochastic.rep()` and use `replicate()` run the simulation 10 times. Results are combined into a `data.frame` for plotting using `matrix.to.df` and `list.to.mat`. 
 ```{r, replicate helpers, echo=TRUE}
+
 #-- function to replicate
 stochastic.rep = function(p0,
                           param.props,
@@ -1303,15 +1266,20 @@ matrix.to.df = function(mat) {
   df$strategy = str_replace_all(rownames(df), "[:digit:]", "")
   df %>% pivot_longer(cols = c(-time, -strategy))
 }
+
+
+
 ```
 
-Run replicated simulations
+Run replicated simulations save time by loading results from output folder.
 ```{r, run-replicates, echo=TRUE, cache=TRUE}
 #-- set seed, number of replicates and cycles
 set.seed(1056)
-nbrep = 10
+# nbrep = 10
+nbrep = 100 # increase to 100 repetitions
 nbcycle = nbcycle
 
+system.time({
 #-- run simulation for all strategies
 stochastic.sim.res = replicate(n = nbrep,
                                lapply(param.props, function(p) {
@@ -1325,7 +1293,14 @@ stochastic.sim.res = replicate(n = nbrep,
                                  })
                                }),
                                simplify = "array")
+})
 
+save(stochastic.sim.res, file = "output/stochastic_sim_res.RData")
+load(file = "output/stochastic_sim_res.RData")
+```
+
+
+```{r, summarize-replicates, echo=TRUE}
 #-- create matrix, then df from results
 sto.res.mat = apply(stochastic.sim.res, 1, FUN = list.to.mat, simplify = F)
 sto.res.df = lapply(sto.res.mat, FUN = matrix.to.df)
@@ -1338,55 +1313,89 @@ sto.res.df$sheep$taxon = "sheep"
 sto.res.df = do.call(rbind.data.frame, sto.res.df)
 sto.res.df$strategy = factor(sto.res.df$strategy, levels = c(names(offtake.mortality)))
 
+#-- summarize dataframe helper, computes mean and confidence intervals for each strategy at each time step. Used for plotting
+summarize.pop.df = function(df) {
+  df %>%
+    group_by(taxon, strategy, time) %>%
+    summarise(
+      mean = mean(value),
+      low = quantile(value, 0.025),
+      up = quantile(value, 0.975)
+    )
+}
+rm(stochastic.sim.res)
 ```
 
 Plot the results of the replicated stochastic simulations.
-```{r, Figure7, warning=FALSE, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure. S3.7. Plots showing results of replicated projections of change in sheep and goat herd sizes through time under the various survivorship profiles used." }
-#-- plot results
-Fig7 = sto.res.df %>%
+```{r, Figure6, warning=FALSE, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure. S3.7. Plots showing results of replicated projections of change in sheep and goat herd sizes through time under the various survivorship profiles used." }
+
+Fig6 <- summarize.pop.df(sto.res.df)  %>% 
+  facet_factor_fun() %>% 
   mutate(Taxon = taxon) %>%
-  ggplot(aes(group = name)) +
+  ggplot(aes(x = time, y = mean)) +
+  geom_ribbon(
+    data = . %>% filter(Taxon == "sheep"),
+    aes(ymin = low, ymax = up, fill = Taxon),
+    alpha = 0.2, 
+    ) +
+  geom_ribbon(
+    data = . %>% filter(Taxon == "goat"),
+    aes(ymin = low, ymax = up, fill = Taxon),
+    alpha = 0.2, 
+    ) +
+  labs(x = "Year", y = "Population size") +
   geom_line(
     data = . %>% filter(Taxon == "sheep"),
-    aes(x = time, y = value , color = Taxon),
+    aes(x = time, y = mean, color = Taxon), 
     lwd = 0.2,
-    alpha = 0.8
+    alpha = 0.8, show.legend = FALSE
   ) +
   geom_line(
     data = . %>% filter(Taxon == "goat"),
-    aes(x = time, y = value, color = Taxon),
+    aes(x = time, y = mean, color = Taxon), 
     lwd = 0.2,
-    alpha = 0.8
-  ) +
-  scale_color_manual(values = cbPalette) +
+    alpha = 0.8, show.legend = FALSE
+  ) + 
+    facet_manual(
+      facets = vars(Author, strategy), 
+      design = design, strip = strip_nested(), scales = "free_y"
+      ) +
   ylab("Number of Animals") +
   xlab("Year") +
+  scale_fill_manual(
+    breaks = c("goat", "sheep"),
+    values = c("#d95f02", "#1b9e77"),
+    labels = c("Goat", "Sheep")) +
   scale_color_manual(
     breaks = c("goat", "sheep"),
-    values = cbPalette[c(1, 2)],
-    labels = c("Goat", "Sheep")
-  ) +
-  theme_minimal() +
-  facet_wrap(~ strategy,
-             scales = "free_y",
-             labeller = as_labeller(strip_labels)) +
+    values = c("#d95f02", "#1b9e77"),
+    labels = c("Goat", "Sheep")) + 
+  theme_classic() +
   theme(
-    strip.text = element_text(size = 8),
-    axis.text = element_text(size = 6),
-    legend.position = "bottom",
-    line = element_line(linewidth = 0.2)
-  )
-Fig7
+    axis.title = element_text(size = 8),
+    axis.text.x = element_text(hjust = 1, size = 6),
+    axis.text.y = element_text(size = 6),
+    line = element_line(linewidth = 0.2),
+    legend.position = "inside",
+    legend.position.inside = c(0.8, 0.3), 
+    legend.title = element_blank(),
+    strip.text = element_text(size = 6),
+    strip.background = element_rect(fill = "white", color = "grey60"),
+    panel.spacing = unit(0.2, "lines")
+  ) 
+  
 
-ggsave(
-  "Figures/Fig6_stochastic_rep.jpg",
-  plot =  Fig7,
-  dpi = 300,
-  width = 6,
-  height = 4
-)
+Fig6
+# 
+# ggsave(
+#   "Figures/Fig6_stochastic_rep_v2.jpg",
+#   plot =  Fig6,
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
 
-rm(stochastic.sim.res, sto.res.mat)
+# rm(stochastic.sim.res, sto.res.mat)
 ```
 
 # Part IV - Optimizing Culling Rates
@@ -1446,14 +1455,25 @@ Now that the optimization algorithm has been demonstrated for one set of paramet
 adjust.offtake = function(in.param,
                           low.threshold,
                           high.threshold,
-                          p0 = 150) {
+                          female.offtake = female.offtake,
+                          sensitivity.test = FALSE, # if TRUE, tests a range of female offtake rates for sensitivity test
+                          p0) {
   #-- calculate phi.opt
   phi.opt = optimize(f = get.off.adjust.poff,
                      param.ref = in.param,
                      interval = c(0, 5))$minimum
   
-  #-- get unadjusted female offtake
-  f.off = in.param$poff[in.param$sex == "F" & in.param$class > 0]
+  if(sensitivity.test) {
+    #-- get unadjusted male offtake
+    m.off = in.param$poff[in.param$sex == "M" & in.param$class > 0]
+  
+    #-- apply female offtake rate
+    f.off = m.off * (female.offtake/100)
+  } else {
+    #-- get unadjusted female offtake
+    f.off = in.param$poff[in.param$sex == "F" & in.param$class > 0]
+  }
+
   
   #-- extract tcla
   tcla1 = in.param[, c(1:5)]
@@ -1471,6 +1491,10 @@ adjust.offtake = function(in.param,
                     in.param$class > 0] = f.off * phi.opt
   } else {
     in.param$poff[in.param$sex == "F" & in.param$class > 0] = f.off
+  }
+  
+  if(sensitivity.test) {
+    in.param$p0 = p0
   }
   return(in.param)
 }
@@ -1499,7 +1523,8 @@ new.results = lapply(listpar, function(l) {
     l,
     FUN = adjust.offtake,
     low.threshold = Lambda.threshold.low,
-    high.threshold = Lambda.threshold.high
+    high.threshold = Lambda.threshold.high, 
+    p0 = p0
   )
   projectHerd2(listpar = l, p0 = p0)
 })
@@ -1517,53 +1542,69 @@ tot.pop.df$offtake = "unadjusted"
 new.pop.res.df$offtake = "adjusted"
 
 #-- merge into a single data.frame
-all.res.df = rbind.data.frame(tot.pop.df, new.pop.res.df)
+all.res.df = rbind.data.frame(tot.pop.df, new.pop.res.df %>% facet_factor_fun())
 
 ```
 
 
 ```{r, plot-optimized-results, warning=FALSE, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure S3.8. Projected sheep and goat populations after applying optimized offtake procedure for the Milk A and Benkovac-Barice strategies."}
 plot.projection = function(df, offtake.list) {
-  df %>%
-    mutate(strategy = factor(strategy, levels = c(names(offtake.list))),
+  df %>% 
+    facet_factor_fun() %>%
+    mutate(#strategy = factor(strategy, levels = c(names(offtake.list))),
            Taxon = factor(Taxon, levels = c("goat", "sheep"))) %>%
     ggplot() +
-    geom_col(aes(time, pop, fill = Taxon)) +
+    geom_col(aes(time, pop, fill = Taxon), alpha = 0.8) +
     scale_fill_manual(
-      breaks = c("goat", "sheep"),
-      values = cbPalette[c(1, 2)],
+      breaks = c("goat", "sheep"), 
+      values = c("#d95f02", "#1b9e77"),
+      # values = cbPalette[c(1, 2)],
       labels = c("Goat", "Sheep")
     ) +
     labs(x = "Time (years)", y = "Number of animals") +
-    facet_wrap(~ strategy,
-               scales = "free_y" ,
-               labeller = as_labeller(strip_labels)) +
-    theme_minimal()
+    facet_manual(
+      facets = vars(Author, strategy), 
+      design = design, 
+      strip = strip_nested(),
+      scales = "free_y") +
+    # facet_wrap(~ strategy,
+    #            scales = "free_y" ,
+    #            labeller = as_labeller(strip_labels)) +
+    # theme_minimal() +
+    theme_classic() +
+    theme(
+      axis.title = element_text(size = 8),
+      axis.text.x = element_text(hjust = 1, size = 6),
+      axis.text.y = element_text(size = 6),
+      line = element_line(linewidth = 0.2),
+      legend.position = "inside",
+      legend.position.inside = c(0.8, 0.3), 
+      legend.title = element_blank(),
+      strip.text = element_text(size = 6),
+      strip.background = element_rect(fill = "white", color = "grey60"),
+      panel.spacing = unit(0.2, "lines")
+  ) 
 }
 
 #-- plot for Energy and the Benkovac-Barice strategy
-plot.projection(new.pop.res.df %>%
-                  filter(str_detect(strategy, "Benkovac-Barice|MilkA")), offtake.list = offtake.mortality) +
-  theme(legend.position = "bottom")
-# plot.projection(tot.pop.df, offtake.list = offtake.mortality)
+plot.projection(new.pop.res.df, offtake.list = offtake.mortality)
 ```
 
 
 ```{r plot-reprojection, message=FALSE, include=FALSE, eval=TRUE, fig.dim=c(6,4), fig.cap="Figure S3.9. Plots showing results of projections after applying optimized offtake adjustments to the various survivorship profiles used." }
 
 #-- plot
-Fig8 = all.res.df %>%
+Fig7 = all.res.df %>%  
   group_by(time, strategy, offtake) %>%
-  reframe(time, strategy, offtake, Taxon, pop, tot.pop = sum(pop)) %>% unique() %>%
-  mutate(strategy = factor(strategy, levels = names(offtake.mortality)),
-         Taxon = factor(Taxon, levels = c("goat", "sheep"))) %>%
+  reframe(time, strategy, offtake, Taxon, pop, tot.pop = sum(pop)) %>% 
+  unique() %>%
+  facet_factor_fun() %>%
   ggplot(aes(group = Taxon)) +
   geom_col(
     data = . %>% filter(offtake == "adjusted"),
     aes(time, pop, fill = Taxon),
     alpha = 0.8,
   ) +
-  theme_minimal() +
   ylab("Number of Animals") +
   xlab("Time (years)") +
   scale_fill_manual(
@@ -1571,28 +1612,33 @@ Fig8 = all.res.df %>%
     values = cbPalette[c(1, 2)],
     labels = c("Goat", "Sheep")
   ) +
-  theme(
-    legend.position = "bottom",
-    line = element_line(linewidth = 0.2),
-    strip.text = element_text(size = 6),
-    axis.text = element_text(size = 6),
-    legend.text = element_text(size = 8),
-    legend.title = element_text(size = 8),
-    axis.title.x = element_text(size = 6),
-    axis.title.y.left = element_text(size = 6),
-  ) +
-  facet_wrap(~ strategy ,
-             scales = "free_y",
-             labeller = as_labeller(strip_labels))
+   facet_manual(
+      facets = vars(Author, strategy), 
+      design = design, 
+      strip = strip_nested(),
+      scales = "free_y") +
+  theme_classic() +
+    theme(
+      axis.title = element_text(size = 8),
+      axis.text.x = element_text(hjust = 1, size = 6),
+      axis.text.y = element_text(size = 6),
+      line = element_line(linewidth = 0.2),
+      legend.position = "inside",
+      legend.position.inside = c(0.8, 0.3), 
+      legend.title = element_blank(),
+      strip.text = element_text(size = 6),
+      strip.background = element_rect(fill = "white", color = "grey60"),
+      panel.spacing = unit(0.2, "lines")
+  ) 
 
-Fig8
-ggsave(
-  "Figures/Fig7_reprojections.jpg",
-  plot =  Fig8,
-  dpi = 300,
-  width = 6,
-  height = 4
-)
+Fig7
+# ggsave(
+#   "Figures/Fig7_reprojections.jpg",
+#   plot =  Fig7,
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
 
 
 ```
@@ -1622,7 +1668,8 @@ new.vprod = new.vprod %>%
     Taxon = factor(Taxon, levels = c("goat", "sheep"))
   )
 
-Fig9 =  new.vprod %>%
+Fig8 =  new.vprod %>%
+  facet_factor_fun() %>% 
   # new.vprod %>%
   filter(strategy != "Baseline") %>%
   ggplot(aes(x = strategy, y = xmean, fill = Taxon)) +
@@ -1643,14 +1690,14 @@ Fig9 =  new.vprod %>%
   coord_flip() +
   theme(legend.position = "bottom")
 
-Fig9
-ggsave(
-  "Figures/Fig8_mean_herd_size.jpg",
-  plot =  Fig9,
-  dpi = 300,
-  width = 6,
-  height = 4
-)
+Fig8
+# ggsave(
+#   "Figures/Fig8_mean_herd_size.jpg",
+#   plot =  Fig8,
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
 
 ```
 
@@ -1737,65 +1784,19 @@ detect_valleys <- function(x, span = 3) {
 
 
 ```{r, plot-functions, include=FALSE}
-#-- labelers for sheep and goat plots
-sheep.labeller = lambda.boot.df %>%
-  mutate(
-    taxon = str_split_i(rownames(lambda.boot.df), "\\.", 1),
-    strategy = str_split_i(rownames(lambda.boot.df), "\\.", 2),
-    lambda = round(t0, 3)
-  ) %>%
-  mutate(
-    strat.lab = case_when(
-      strategy == "MeatA" ~ "Meat A",
-      strategy == "MeatB" ~ "Meat B",
-      strategy == "MilkA" ~ "Milk A",
-      strategy == "MilkB" ~ "Milk B",
-      .default = strategy
-    )
-  ) %>%
-  filter(taxon == "sheep") %>%
-  select(strategy, strat.lab, lambda) %>%
-  mutate(lambda.lab = paste0(strat.lab, "\n (", format(lambda, nsmall =
-                                                         3), ")")) %>%
-  select(strategy, lambda.lab)
-
-sheep_labels = setNames(c(sheep.labeller$lambda.lab), c(sheep.labeller$strategy))
-
-goat.labeller = lambda.boot.df %>%
-  mutate(
-    taxon = str_split_i(rownames(lambda.boot.df), "\\.", 1),
-    strategy = str_split_i(rownames(lambda.boot.df), "\\.", 2),
-    lambda = round(t0, 3)
-  ) %>%
-  mutate(
-    strat.lab = case_when(
-      strategy == "MeatA" ~ "Meat A",
-      strategy == "MeatB" ~ "Meat B",
-      strategy == "MilkA" ~ "Milk A",
-      strategy == "MilkB" ~ "Milk B",
-      .default = strategy
-    )
-  ) %>%
-  filter(taxon == "goat") %>%
-  select(strategy, strat.lab, lambda) %>%
-  mutate(lambda.lab = paste0(strat.lab, "\n (", format(lambda, nsmall =
-                                                         3), ")")) %>%
-  select(strategy, lambda.lab)
-
-#-- create label lists
-goat_labels = setNames(c(goat.labeller$lambda.lab), c(goat.labeller$strategy))
-
 plot.m = function(taxon = c("goat", "sheep")) {
   tax = match.arg(taxon)
   all.m.df %>%
+    facet_factor_fun() %>% 
     filter(Taxon == tax) %>%
-    mutate(strategy = factor(strategy, levels = names(offtake.mortality))) %>%
+    # mutate(strategy = factor(strategy, levels = names(offtake.mortality))) %>%
     group_by(Taxon, strategy, offtake) %>%
     reframe(
       cycle,
       Taxon,
       strategy,
       offtake,
+      Author,
       m,
       m10 = calculate_moving_average(m, 10, type = "simple"),
       peak = detect_peaks(m10, span = 31),
@@ -1825,7 +1826,7 @@ plot.m = function(taxon = c("goat", "sheep")) {
       data = . %>% filter(peak),
       aes(x = cycle, y = m10),
       shape = 24,
-      fill = carto_pal(name = "Safe")[12],
+      fill = rcartocolor::carto_pal(name = "Safe")[12],
       alpha = 0.8,
       size = 0.8,
       show.legend = F
@@ -1834,70 +1835,68 @@ plot.m = function(taxon = c("goat", "sheep")) {
       data = . %>% filter(valley),
       aes(x = cycle, y = m10),
       shape = 25,
-      fill = carto_pal(name = "Safe")[12],
+      fill = rcartocolor::carto_pal(name = "Safe")[12],
       alpha = 0.8,
       size = 0.8,
       show.legend = F
     ) +
-    scale_color_manual(values = cbPalette[c(4, 6)], labels = c("m", "λ")) +
+    scale_color_manual(values = cbPalette[c(4, 6)], labels = c("m (optimized)", "λ (unadjusted)")) +
     ylab(paste0(expression("λ and m, ("), tax, ")")) + # "Lambda (sheep)") +
     xlab("Time (years)") +
     xlim(c(10, 200)) +
     scale_y_continuous(expand = c(0.02, 0.02)) +
+    facet_manual(
+      facets = vars(Author, strategy), 
+      design = design, 
+      strip = strip_nested(),
+      scales = "free_y") +
     theme_minimal() +
     theme(
-      legend.position = "bottom",
-      strip.text = element_text(size = 8),
+      axis.title = element_text(size = 8),
+      axis.text.x = element_text(hjust = 1, size = 6),
       axis.text.y = element_text(size = 6),
-      axis.text.x = element_text(size = 6),
-      legend.title = element_text(size = 10),
-      axis.title = element_text(size = 10),
-      line = element_line(linewidth = 0.2)
-    ) +
-    if (tax == "goat") {
-      facet_wrap(~ strategy ,
-                 scales = "free_y",
-                 labeller = as_labeller(goat_labels)) # goat_labeller )
-    } else {
-      facet_wrap(~ strategy ,
-                 scales = "free_y",
-                 labeller = as_labeller(sheep_labels)) #  sheep_labeller )
-    }
+      line = element_line(linewidth = 0.2),
+      legend.position = "inside",
+      legend.position.inside = c(0.8, 0.3), 
+      legend.title = element_blank(),
+      strip.text = element_text(size = 6),
+      strip.background = element_rect(fill = "white", color = "grey60"),
+      panel.spacing = unit(0.2, "lines")
+    ) 
 }
 
 ```
 
-```{r, Fig11, warning=FALSE, echo=FALSE, eval=TRUE,  fig.dim=c(6,4), fig.cap="Figure S3.11. Showing multiplication rates of unadjusted and adjusted offtake rates for goats"}
+```{r, Fig9, warning=FALSE, echo=FALSE, eval=TRUE,  fig.dim=c(6,4), fig.cap="Figure S3.11. Showing multiplication rates of unadjusted and adjusted offtake rates for goats"}
 plot.m("goat")
 ```
 
-```{r, Fig12, warning=FALSE, echo=FALSE, eval=TRUE,  fig.dim=c(6,4), fig.cap="Figure S3.12. Showing multiplication rates of unadjusted and adjusted offtake rates for sheep"}
+```{r, Fig10, warning=FALSE, echo=FALSE, eval=TRUE,  fig.dim=c(6,4), fig.cap="Figure S3.12. Showing multiplication rates of unadjusted and adjusted offtake rates for sheep"}
 plot.m("sheep")
 ```
 
 ```{r, save-figs, include=FALSE, eval=FALSE}
-# Fig8
-ggsave(
-  "Figures/Fig9_Lambda_goat.jpg",
-  plot =  plot.m("goat") ,
-  dpi = 300,
-  width = 6,
-  height = 4
-)
 # Fig9
-ggsave(
-  "Figures/Fig10_Lambda_sheep.jpg",
-  plot =  plot.m("sheep") ,
-  dpi = 300,
-  width = 6,
-  height = 4
-)
+# ggsave(
+#   "Figures/Fig9_Lambda_goat.jpg",
+#   plot =  plot.m("goat") ,
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
+# # Fig10
+# ggsave(
+#   "Figures/Fig10_Lambda_sheep.jpg",
+#   plot =  plot.m("sheep") ,
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
 ```
 
 ### Levene's Test for Equality of Variance
 A Levene's Test for Equality of variances is used to assess whether there was a change in interannual variance of herd growth rates before and after culling rates were optimized.
 ```{r, Levenes-Test, include = FALSE, warning=FALSE}
-
 all.m.list = all.m.df %>%
   mutate(strategy = factor(
     strategy,
@@ -1933,8 +1932,6 @@ head(lev.res.df)
 ```
 
 ```{r, Levenes-TableC5, include=FALSE, eval=TRUE}
-
-
 T5ft = lev.res.df %>%
   pivot_longer(cols = c("F.value", "p", "lambda")) %>%
   pivot_wider(names_from = c(Taxon, name)) %>%
@@ -1974,8 +1971,322 @@ sect_properties <- prop_section(
 )
 T5ft
 #-- create output word doc
-save_as_docx(T5ft, path = "./tables/Table6_Variance.docx", pr_section = sect_properties)
+# save_as_docx(T5ft, path = "./tables/Table6_Variance.docx", pr_section = sect_properties)
 
+```
+
+# Part IV - Sensitivity test
+Here we implement a Sobol' sensitivity test to evaluate the sensitivity of the optimization algorithm to different initial herd sizes, herd growth rate thresholds, and female offtake rates.
+
+The parameter values are passed to the adjust.offtake function, which applies the optimization algorithm to adjust offtake rates based on the specified thresholds and initial herd size. The resulting adjusted parameters are then used to project the herd dynamics using projectHerd2(). The outputs of these projections are summarized to obtain mean population size, standard deviation of population size, time to extinction, and initial population size (p0). These outputs are returned as a data frame for each set of parameter values.
+
+We focus on the effects of these parameters on mean herd size over the 200-year projection, as this is a key output of interest for understanding the long-term implications of modifying culling rates. Variance is also of interest, as it can indicate the stability of the herd under different parameter values. Time to extinction provides insights into the risk of herd collapse under different scenarios. Initial population size (p0) is included as a parameter in the sensitivity test to evaluate how sensitive the optimization algorithm is to changes in the starting conditions of the herd.
+```{r, Sobol-sensitivity, echo=TRUE, eval=FALSE}
+#-- sensitivity test needs to test the effects of the selected parameters on specific outputs.
+#-- first, we generate the range of parameters to test
+
+# #-- Parameter space is reduced for demonstration purposes. To reproduce full sensitivity test, increase `np` and `nboot.sens` values. Full sensitivity analysis can be executed on a HPC using the Rscript "XX_SENSITIVITY.R"
+
+# set.seed(123)
+
+# np=500
+# nboot.sens = 50
+# 
+# low.threshold.range = rnorm(mean = Lambda.threshold.low, sd = 0.01, n = np)
+# high.threshold.range = rnorm(mean = Lambda.threshold.high, sd = 0.01, n = np)
+# # p0.range = round(rnorm(mean=p0, sd=25, n=np))
+# female.offtake.range = rnorm(mean=female.offtake, sd=5, n=np)
+# 
+# # generate two examples of random number from parmeter distributions
+# 
+# X1 = cbind.data.frame(low.threshold.range, high.threshold.range, p0.range, female.offtake.range)
+# 
+# # repeat sampling
+# low.threshold.range = rnorm(mean = Lambda.threshold.low, sd = 0.01, n = np)
+# high.threshold.range = rnorm(mean = Lambda.threshold.high, sd = 0.01, n = np)
+# p0.range = round(rnorm(mean=p0, sd=25, n=np))
+# female.offtake.range = rnorm(mean=female.offtake, sd=5, n=np)
+# 
+# X2 = cbind.data.frame(low.threshold.range, high.threshold.range, p0.range, female.offtake.range)
+# 
+# #-- Create a dataframe containing the range of parameter values to test
+# sens_adjust_offtake = sensitivity::sobol2007(model = NULL, X1, X2, nboot = nboot.sens)
+# 
+# #-- run the model of all parameter values. 
+# 
+# #-- Wrapper function for parLapply to run sensitivity analysis for one set of parameters from listpar. This function is passed to parLapply to run the sensitivity analysis across multiple cores in parallel 
+# sensitivity_wrapper <- function(l, sens_adjust_offtake) {
+#   
+#   # Apply over all parameter combinations in sens_adjust_offtake$X
+#   tmp_res <- apply(sens_adjust_offtake$X, 1, function(params) {
+#     
+#     lt <- params[1]  # low.threshold
+#     ht <- params[2]  # high.threshold
+#     # p0s <- params[3] # p0
+#     fo <- params[4]  # female.offtake
+#     
+#     #-- get adjusted parameters based on optimization function with current sampled parameter values
+#     adjusted_params <- lapply(l, 
+#                               FUN = adjust.offtake,
+#                               low.threshold = lt,
+#                               high.threshold = ht,
+#                               p0 = p0,
+#                               female.offtake = fo,
+#                               sensitivity.test = TRUE)
+#     
+#     #-- Run projection
+#     tmp <- projectHerd2(listpar = adjusted_params, p0 = p0)
+#     
+#     #-- summarize results
+#     summary.df <- pop_summary2(tmp, sex = FALSE, interval = "year")
+#     
+#     # Return summary dataframe
+#     data.frame(
+#       mean.pop.size = mean(summary.df$pop),
+#       pop.sd = sd(summary.df$pop),
+#       time.to.extinct = summary.df$time[which(summary.df$pop == 0)[1]],
+#       # p0 = p0s,
+#       low.threshold = lt,
+#       high.threshold = ht,
+#       female.offtake = fo
+#     )
+#   })
+#   
+#   # Combine results
+#   do.call(rbind.data.frame, tmp_res)
+# }
+# 
+# #-- helper function to extract sobol indices
+# extract_indices = function(sobol_obj){
+#   interactions = sobol_obj$T[,1] - sobol_obj$S[,1]
+#   data.frame(
+#     param = rownames(sobol_obj$S),
+#     main_effect = sobol_obj$S[,1],
+#     main_effect_low = sobol_obj$S[,4],
+#     main_effect_high = sobol_obj$S[,5],
+#     total_effect = sobol_obj$T[,1],
+#     total_effect_low = sobol_obj$T[,4],
+#     total_effect_high = sobol_obj$T[,5],
+#     interactions = interactions
+#   )
+# }
+# 
+# system.time({
+# #-- Set up parallel processing
+# cl <- makeCluster(detectCores() - 1) # leave one core free
+# #-- load necessary libraries on each cluster node
+# clusterEvalQ(cl, {
+#   library(sensitivity)
+#   library(boot)
+#   library(HerdDynamics)
+#   library(dplyr)
+#   library(tidyr)
+#   library(stringr)
+# })
+# 
+# #-- export necessary functions and variables to cluster nodes
+# clusterExport(cl, varlist = c("adjust.offtake", "get.off.adjust.poff", "projectHerd2", "pop_summary2", "sens_adjust_offtake"))
+# 
+# #-- run sensitivity analysis in parallel across all sets of parameters for Meat, Milk, and Wool models for sheep and goats
+# Sensitivity_results <- parLapply(cl, listpar[c(3:5, 19:21)], sensitivity_wrapper, sens_adjust_offtake)
+# 
+# #-- tell sensitivity object about results for each parameter set. This will allow us to calculate sensitivity indices for each output variable (mean population size, population standard deviation, time to extinction) with respect to the input parameters (low.threshold, high.threshold, initial population and female offtake rate).
+#   sens_adjust_offtake_sobol.pop.size = lapply(Sensitivity_results, function(s){
+#     sensitivity::tell(sens_adjust_offtake, s$mean.pop.size)
+#   })
+#   
+#   sens_adjust_offtake_sobol.pop.sd = lapply(Sensitivity_results, function(s){
+#     sensitivity::tell(sens_adjust_offtake, s$pop.sd)
+#   })
+#   # 
+#   # sens_adjust_offtake_sobol.extinct = lapply(Sensitivity_results, function(s){
+#   #   sensitivity::tell(sens_adjust_offtake, s$time.to.extinct)
+#   # })
+#   
+#   sobol_res = list(
+#     pop.size = sens_adjust_offtake_sobol.pop.size,
+#     pop.sd = sens_adjust_offtake_sobol.pop.sd
+#     # time.to.extinct = sens_adjust_offtake_sobol.extinct
+#   )
+#   #-- send to data.frame
+#   sobol_indices = lapply(sobol_res, function(s) {
+#     s = unlist(s, recursive = F)
+#     do.call(rbind.data.frame, lapply(s, extract_indices)) %>%  
+#       mutate(
+#       res = str_split_i(rownames(.), "\\.", 2),
+#       taxon = str_split_i(rownames(.), "\\.", 3),
+#       strategy = str_split_i(rownames(.), "\\.", 4)
+#     ) 
+#   })
+#   
+#   sobol_indices <- lapply(sobol_indices, function(s) {
+#     rownames(s) <- NULL
+#     return(s)
+#   })
+#   names(sobol_res) <- names(listpar)
+# #-- clean up cluster
+# stopCluster(cl)
+# })
+
+#-- save results
+# saveRDS(sobol_res, file = "./output/sobol_sensitivity_results.rds")
+# saveRDS(sobol_indices, file = "./output/sobol_indices_df.rds")
+```
+
+```{r, load-sensitivity-results, include=FALSE, eval=TRUE }
+#-- load results
+# readRDS("./output/sobol_sensitivity_results.rds")
+sobol_indices = readRDS("./output/sobol_indices_df.rds")
+
+
+T7 = sobol_indices %>% 
+  filter(param=="female.offtake.range") %>% 
+  reframe(strategy, taxon, res, main_effect) %>% 
+  pivot_wider(names_from = c(strategy, res), values_from = main_effect) %>% 
+  flextable(col_keys = c(
+    "taxon", "Meat_size", "Meat_sd",  
+    "Milk_size", "Milk_sd", 
+    "Wool_size", "Wool_sd" )) %>%
+  separate_header(opts = c("center-hspan", "default-theme")) %>% 
+  # add breaks in header using as_chunk
+  add_header_lines(values = as_paragraph(list_values = c("Main effects"), align = "center")) %>%
+  colformat_double(digits = 2) %>%
+  set_table_properties(layout = "autofit", align = "center") %>%
+  theme_vanilla() 
+  # autofit() %>%
+  # theme_vanilla()
+  
+T7
+save_as_docx(T6, path = "./tables/Table7_Sensitivity_Main_Effects.docx", pr_section = sect_properties)
+
+```
+
+
+```{r, Fig11 - plot total effect indices}
+param_labels <- c(
+  "female.offtake.range"  = "Female offtake rate (%)",
+  "high.threshold.range"  = expression(High~lambda~threshold),
+  "low.threshold.range"   = expression(Low~lambda~threshold),
+  "p0.range"              = "Initial population (p0)"
+)
+
+#-- Fig 11 grid
+fig11.design = matrix(c(
+  1, 2,
+  3, 4,
+  5, 6 ), nrow = 3, byrow = TRUE )
+
+Fig11 <- sobol_indices %>%
+  facet_factor_fun() %>% 
+  mutate(res = factor(res, levels = c("size", "sd"))) %>% 
+  ggplot(aes(group = taxon, colour = param)) +
+  geom_point(
+    # aes(shape = taxon, x = param, y = total_effect),
+    aes(shape = taxon, x = param, y = main_effect),
+    position = position_dodge(width = 0.8), 
+    size = 2,
+    alpha = 0.6
+  ) +
+  geom_errorbar(
+    aes(x = param, 
+        # ymin = total_effect_low, ymax = total_effect_high
+        ymin = main_effect_low, ymax = main_effect_high
+        ),
+    position = position_dodge(width = 0.8),
+    width = 0.4) +
+  xlab("Sensitivity index") +
+  ylab("Main effect on Herd Size") +
+  scale_color_manual(
+    values = scales::hue_pal()(length(param_labels)),
+    breaks = names(param_labels),
+    labels = param_labels 
+  ) +
+  theme_minimal() +
+  facet_manual(
+    facets = vars( strategy, res),
+    design = fig11.design,
+    strip = strip_nested(),
+    # scales = "free_y"
+    ) +
+  theme(
+    axis.title = element_text(size = 8),
+    axis.text.x = element_blank(), # element_text(hjust = 1, size = 6),
+    axis.text.y = element_text(size = 8),
+    line = element_line(linewidth = 0.2),
+    # legend.position = "inside",
+    legend.position.inside = c(0.8, 0.3), 
+    legend.title = element_blank(),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "white", color = "grey60"),
+    panel.spacing = unit(0.2, "lines"),
+    guides(colour = guide_legend(override.aes = list(linetype = 0)),
+           shape  = guide_legend(override.aes = list(linetype = 0)))
+  )
+  
+Fig11
+# save Fig 11
+# ggsave(
+#   plot =  Fig11 , filename = "./Figures/Fig11_Sobol_Main_Effects.jpg",
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
+```
+
+```{r, Fig12 plot total effect indices}
+Fig12 <- sobol_indices %>%
+  facet_factor_fun() %>% 
+  mutate(res = factor(res, levels = c("size", "sd"))) %>% 
+  # filter(param != "female.offtake.range") %>% 
+  ggplot(aes(group = taxon, colour = param)) +
+  geom_point(
+    aes(shape = taxon, x = param, y = total_effect),
+    # aes(shape = taxon, x = param, y = main_effect),
+    position = position_dodge(width = 0.8), 
+    size = 2,
+    alpha = 0.6
+  ) +
+  geom_errorbar(
+    aes(x = param, ymin = total_effect_low, ymax = total_effect_high),
+    position = position_dodge(width = 0.8),
+    width = 0.4) +
+  xlab("Sensitivity index") +
+  ylab("Total effect on Herd Size") +
+  scale_color_manual(
+    values = scales::hue_pal()(length(param_labels)),
+    breaks = names(param_labels),
+    labels = param_labels 
+  ) +
+  theme_minimal() +
+  facet_manual(
+    facets = vars( strategy, res),
+    design = fig11.design,
+    strip = strip_nested(),
+    # scales = "free_y"
+    ) +
+  theme(
+    axis.title = element_text(size = 8),
+    axis.text.x = element_blank(), # element_text(hjust = 1, size = 6),
+    axis.text.y = element_text(size = 8),
+    line = element_line(linewidth = 0.2),
+    # legend.position = "inside",
+    legend.position.inside = c(0.8, 0.3), 
+    legend.title = element_blank(),
+    strip.text = element_text(size = 10),
+    strip.background = element_rect(fill = "white", color = "grey60"),
+    panel.spacing = unit(0.2, "lines"),
+    guides(colour = guide_legend(override.aes = list(linetype = 0)),
+           shape  = guide_legend(override.aes = list(linetype = 0)))
+  )
+Fig12
+# save Fig 12
+# ggsave(
+#   plot =  Fig12 ,
+#   filename = "./Figures/Fig12_Sobol_Total_effects.jpg",
+#   dpi = 300,
+#   width = 6,
+#   height = 4
+# )
 ```
 
 

@@ -159,12 +159,27 @@ probabilities are calculated following Price et al.
 `HerdDynamics::survivorship()`. In a final step the data is formatted as
 a list to conform with the `offtake.models` list created previously.
 
-<figure>
-<img src="README_files/figure-gfm/plotFig2-1.png"
-alt="Figure 2. Survivorship curves for archaeological culling strategies." />
-<figcaption aria-hidden="true">Figure 2. Survivorship curves for
-archaeological culling strategies.</figcaption>
-</figure>
+![Figure 2. Survivorship curves for archaeological culling
+strategies.](README_files/figure-gfm/plotFig2-1.png) \### Supplementary
+Table S4.1: Mandible sample information
+
+``` r
+TableS4.1 <- wear.df %>% 
+  filter(Payne.Group != "") %>%
+  group_by(Site, Period, Species) %>%
+  reframe(N = n()) %>%
+  pivot_wider(names_from = Species, values_from = N) %>% 
+  group_by(Site, Period) %>%
+  reframe(Site, Period, 
+          N = sum(CA, OA, OC),
+          "Goat:Sheep:Indeterminate" = paste0(CA, ":", OA, ":", OC)) %>% 
+  as_flextable() %>%
+  set_caption("Table S4. Sample information for mandibles used to calculate age-at-death distributions for ovicaprids at four Neolithic sites in Dalmatia.") %>% 
+  theme_vanilla()
+  
+#-- create output word doc
+save_as_docx(TableS4.1, path = "tables/TableS4-1_survival_rates.docx", pr_section = sect_properties)
+```
 
 <img src="README_files/figure-gfm/print-Table3-1.png" width="1287" />
 
