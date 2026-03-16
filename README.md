@@ -582,7 +582,7 @@ listpar = lapply(param.props, function(p) {
 ```
 
     ##    user  system elapsed 
-    ##   33.74    0.59   36.89
+    ##   33.93    0.56   35.90
 
 ``` r
 #-- save stochastic environment to replicate results

@@ -2263,7 +2263,7 @@ Fig11 <- sobol_indices %>%
 Comparing the main effects of the parameters across the different strategies and taxa can provide insights into which parameters are most influential in determining the mean herd size and its variability. The following figure shows the main effects of all parameters on mean herd size for the Meat, Milk, and Wool strategies for sheep and goats.
 
 ```{r Fig11, include=TRUE, echo=FALSE, fig.dim=c(6,4), fig.cap="Figure 11. Main effects of parameters on mean herd size for the Meat, Milk, and Wool strategies for sheep and goats."}
-Fig11
+Fig11 
 
 ```
 
