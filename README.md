@@ -2,7 +2,7 @@ Evaluating Livestock Culling Practices using Population Projection
 Models in Neolithic Dalmatia
 ================
 Nicholas Triozzi
-2025-02-25
+2026-03-16
 
 # Livestock Population Dynamics and Optimziation of Culling Rates
 
@@ -13,6 +13,8 @@ herd dynamics under the constraints of various culling strategies. The
 content of this document and associated scripts are supporting materials
 for “Evaluating Livestock Culling Practices using Population Projection
 Models in Neolithic Dalmatia”.
+
+The full analysis can be run by exexuting the Rscript “01_ANALYSIS.R.”
 
 ## Overview
 
@@ -580,7 +582,7 @@ listpar = lapply(param.props, function(p) {
 ```
 
     ##    user  system elapsed 
-    ##   28.92    0.50   29.86
+    ##   33.74    0.59   36.89
 
 ``` r
 #-- save stochastic environment to replicate results
@@ -1374,363 +1376,231 @@ and after culling rates were optimized.
 
 # Part IV - Sensitivity test
 
+## Parameter space
+
 Here we implement a Sobol’ sensitivity test to evaluate the sensitivity
-of the optimization algorithm to different initial herd sizes, herd
-growth rate thresholds, and female offtake rates.
+of the optimization algorithm to different herd growth rate thresholds
+and female offtake rates. We focus on the effects of these parameters on
+mean herd size over the 200-year projection, as this is a key output of
+interest for understanding the long-term implications of modifying
+culling rates. Variance is also of interest, as it can indicate the
+stability of the herd under different parameter values.
 
-The parameter values are passed to the adjust.offtake function, which
-applies the optimization algorithm to adjust offtake rates based on the
-specified thresholds and initial herd size. The resulting adjusted
-parameters are then used to project the herd dynamics using
-projectHerd2(). The outputs of these projections are summarized to
-obtain mean population size, standard deviation of population size, time
-to extinction, and initial population size (p0). These outputs are
-returned as a data frame for each set of parameter values.
-
-We focus on the effects of these parameters on mean herd size over the
-200-year projection, as this is a key output of interest for
-understanding the long-term implications of modifying culling rates.
-Variance is also of interest, as it can indicate the stability of the
-herd under different parameter values. Time to extinction provides
-insights into the risk of herd collapse under different scenarios.
-Initial population size (p0) is included as a parameter in the
-sensitivity test to evaluate how sensitive the optimization algorithm is
-to changes in the starting conditions of the herd.
+The size of the parameter space will have implications for computational
+load. Adjusting `np` and `nboot.sens` values increases parameter space.
+Full sensitivity analysis can be executed on a HPC using the Rscript
+“XX_SENSITIVITY.R”
 
 ``` r
-#-- sensitivity test needs to test the effects of the selected parameters on specific outputs.
-#-- first, we generate the range of parameters to test
+set.seed(123)
+#-- 500 samples (2x)
+np=500
+nboot.sens = 50 #bootstrap 50x (2500 combinations)
+low.threshold.range = rnorm(mean = Lambda.threshold.low, sd = 0.01, n = np)
+high.threshold.range = rnorm(mean = Lambda.threshold.high, sd = 0.01, n = np)
+female.offtake.range = rnorm(mean=female.offtake, sd=5, n=np)
 
-# #-- Parameter space is reduced for demonstration purposes. To reproduce full sensitivity test, increase `np` and `nboot.sens` values. Full sensitivity analysis can be executed on a HPC using the Rscript "XX_SENSITIVITY.R"
+X1 = cbind.data.frame(low.threshold.range, high.threshold.range, p0.range, female.offtake.range)
 
-# set.seed(123)
+low.threshold.range = rnorm(mean = Lambda.threshold.low, sd = 0.01, n = np)
+high.threshold.range = rnorm(mean = Lambda.threshold.high, sd = 0.01, n = np)
+p0.range = round(rnorm(mean=p0, sd=25, n=np))
+female.offtake.range = rnorm(mean=female.offtake, sd=5, n=np)
 
-# np=500
-# nboot.sens = 50
-# 
-# low.threshold.range = rnorm(mean = Lambda.threshold.low, sd = 0.01, n = np)
-# high.threshold.range = rnorm(mean = Lambda.threshold.high, sd = 0.01, n = np)
-# # p0.range = round(rnorm(mean=p0, sd=25, n=np))
-# female.offtake.range = rnorm(mean=female.offtake, sd=5, n=np)
-# 
-# # generate two examples of random number from parmeter distributions
-# 
-# X1 = cbind.data.frame(low.threshold.range, high.threshold.range, p0.range, female.offtake.range)
-# 
-# # repeat sampling
-# low.threshold.range = rnorm(mean = Lambda.threshold.low, sd = 0.01, n = np)
-# high.threshold.range = rnorm(mean = Lambda.threshold.high, sd = 0.01, n = np)
-# p0.range = round(rnorm(mean=p0, sd=25, n=np))
-# female.offtake.range = rnorm(mean=female.offtake, sd=5, n=np)
-# 
-# X2 = cbind.data.frame(low.threshold.range, high.threshold.range, p0.range, female.offtake.range)
-# 
-# #-- Create a dataframe containing the range of parameter values to test
-# sens_adjust_offtake = sensitivity::sobol2007(model = NULL, X1, X2, nboot = nboot.sens)
-# 
-# #-- run the model of all parameter values. 
-# 
-# #-- Wrapper function for parLapply to run sensitivity analysis for one set of parameters from listpar. This function is passed to parLapply to run the sensitivity analysis across multiple cores in parallel 
-# sensitivity_wrapper <- function(l, sens_adjust_offtake) {
-#   
-#   # Apply over all parameter combinations in sens_adjust_offtake$X
-#   tmp_res <- apply(sens_adjust_offtake$X, 1, function(params) {
-#     
-#     lt <- params[1]  # low.threshold
-#     ht <- params[2]  # high.threshold
-#     # p0s <- params[3] # p0
-#     fo <- params[4]  # female.offtake
-#     
-#     #-- get adjusted parameters based on optimization function with current sampled parameter values
-#     adjusted_params <- lapply(l, 
-#                               FUN = adjust.offtake,
-#                               low.threshold = lt,
-#                               high.threshold = ht,
-#                               p0 = p0,
-#                               female.offtake = fo,
-#                               sensitivity.test = TRUE)
-#     
-#     #-- Run projection
-#     tmp <- projectHerd2(listpar = adjusted_params, p0 = p0)
-#     
-#     #-- summarize results
-#     summary.df <- pop_summary2(tmp, sex = FALSE, interval = "year")
-#     
-#     # Return summary dataframe
-#     data.frame(
-#       mean.pop.size = mean(summary.df$pop),
-#       pop.sd = sd(summary.df$pop),
-#       time.to.extinct = summary.df$time[which(summary.df$pop == 0)[1]],
-#       # p0 = p0s,
-#       low.threshold = lt,
-#       high.threshold = ht,
-#       female.offtake = fo
-#     )
-#   })
-#   
-#   # Combine results
-#   do.call(rbind.data.frame, tmp_res)
-# }
-# 
-# #-- helper function to extract sobol indices
-# extract_indices = function(sobol_obj){
-#   interactions = sobol_obj$T[,1] - sobol_obj$S[,1]
-#   data.frame(
-#     param = rownames(sobol_obj$S),
-#     main_effect = sobol_obj$S[,1],
-#     main_effect_low = sobol_obj$S[,4],
-#     main_effect_high = sobol_obj$S[,5],
-#     total_effect = sobol_obj$T[,1],
-#     total_effect_low = sobol_obj$T[,4],
-#     total_effect_high = sobol_obj$T[,5],
-#     interactions = interactions
-#   )
-# }
-# 
-# system.time({
-# #-- Set up parallel processing
-# cl <- makeCluster(detectCores() - 1) # leave one core free
-# #-- load necessary libraries on each cluster node
-# clusterEvalQ(cl, {
-#   library(sensitivity)
-#   library(boot)
-#   library(HerdDynamics)
-#   library(dplyr)
-#   library(tidyr)
-#   library(stringr)
-# })
-# 
-# #-- export necessary functions and variables to cluster nodes
-# clusterExport(cl, varlist = c("adjust.offtake", "get.off.adjust.poff", "projectHerd2", "pop_summary2", "sens_adjust_offtake"))
-# 
-# #-- run sensitivity analysis in parallel across all sets of parameters for Meat, Milk, and Wool models for sheep and goats
-# Sensitivity_results <- parLapply(cl, listpar[c(3:5, 19:21)], sensitivity_wrapper, sens_adjust_offtake)
-# 
-# #-- tell sensitivity object about results for each parameter set. This will allow us to calculate sensitivity indices for each output variable (mean population size, population standard deviation, time to extinction) with respect to the input parameters (low.threshold, high.threshold, initial population and female offtake rate).
-#   sens_adjust_offtake_sobol.pop.size = lapply(Sensitivity_results, function(s){
-#     sensitivity::tell(sens_adjust_offtake, s$mean.pop.size)
-#   })
-#   
-#   sens_adjust_offtake_sobol.pop.sd = lapply(Sensitivity_results, function(s){
-#     sensitivity::tell(sens_adjust_offtake, s$pop.sd)
-#   })
-#   # 
-#   # sens_adjust_offtake_sobol.extinct = lapply(Sensitivity_results, function(s){
-#   #   sensitivity::tell(sens_adjust_offtake, s$time.to.extinct)
-#   # })
-#   
-#   sobol_res = list(
-#     pop.size = sens_adjust_offtake_sobol.pop.size,
-#     pop.sd = sens_adjust_offtake_sobol.pop.sd
-#     # time.to.extinct = sens_adjust_offtake_sobol.extinct
-#   )
-#   #-- send to data.frame
-#   sobol_indices = lapply(sobol_res, function(s) {
-#     s = unlist(s, recursive = F)
-#     do.call(rbind.data.frame, lapply(s, extract_indices)) %>%  
-#       mutate(
-#       res = str_split_i(rownames(.), "\\.", 2),
-#       taxon = str_split_i(rownames(.), "\\.", 3),
-#       strategy = str_split_i(rownames(.), "\\.", 4)
-#     ) 
-#   })
-#   
-#   sobol_indices <- lapply(sobol_indices, function(s) {
-#     rownames(s) <- NULL
-#     return(s)
-#   })
-#   names(sobol_res) <- names(listpar)
-# #-- clean up cluster
-# stopCluster(cl)
-# })
+X2 = cbind.data.frame(low.threshold.range, high.threshold.range, p0.range, female.offtake.range)
+
+#-- Create a dataframe containing the range of parameter values to test
+sens_adjust_offtake = sensitivity::sobol2007(model = NULL, X1, X2, nboot = nboot.sens)
+```
+
+## Helper functions for Sensitivity Analysis
+
+The parameter values are passed to the `adjust.offtake()` function,
+which applies the optimization algorithm to adjust culling rates based
+on the specified thresholds and initial herd size. The resulting
+adjusted parameters are then used to project the herd dynamics using
+`projectHerd2()`. The outputs of these projections are summarized with
+`pop_summary2()` and mean and standard deviation of population size is
+calculated.
+
+The `sensitivity_wrapper()` function in this chunk all of this using the
+parameter space defined above. Another helper function
+`extract_indices()` is defined to extract the Sobol’ sensitivity indices
+from the results of the sensitivity analysis.
+
+``` r
+#-- Wrapper function for parLapply to run sensitivity analysis for one set of parameters from listpar. This function is passed to parLapply to run the sensitivity analysis across multiple cores in parallel
+sensitivity_wrapper <- function(l, sens_adjust_offtake) {
+
+  # Apply over all parameter combinations in sens_adjust_offtake$X
+  tmp_res <- apply(sens_adjust_offtake$X, 1, function(params) {
+
+    lt <- params[1]  # low.threshold
+    ht <- params[2]  # high.threshold
+    fo <- params[4]  # female.offtake
+
+    #-- get adjusted parameters based on optimization function with current sampled parameter values
+    adjusted_params <- lapply(l,
+                              FUN = adjust.offtake,
+                              low.threshold = lt,
+                              high.threshold = ht,
+                              p0 = p0,
+                              female.offtake = fo,
+                              sensitivity.test = TRUE)
+
+    #-- Run projection
+    tmp <- projectHerd2(listpar = adjusted_params, p0 = p0)
+
+    #-- summarize results
+    summary.df <- pop_summary2(tmp, sex = FALSE, interval = "year")
+
+    # Return summary dataframe
+    data.frame(
+      mean.pop.size = mean(summary.df$pop),
+      pop.sd = sd(summary.df$pop),
+      time.to.extinct = summary.df$time[which(summary.df$pop == 0)[1]],
+      low.threshold = lt,
+      high.threshold = ht,
+      female.offtake = fo
+    )
+  })
+
+  # Combine results
+  do.call(rbind.data.frame, tmp_res)
+}
+
+#-- helper function to extract sobol indices
+extract_indices = function(sobol_obj){
+  interactions = sobol_obj$T[,1] - sobol_obj$S[,1]
+  data.frame(
+    param = rownames(sobol_obj$S),
+    main_effect = sobol_obj$S[,1],
+    main_effect_low = sobol_obj$S[,4],
+    main_effect_high = sobol_obj$S[,5],
+    total_effect = sobol_obj$T[,1],
+    total_effect_low = sobol_obj$T[,4],
+    total_effect_high = sobol_obj$T[,5],
+    interactions = interactions
+  )
+}
+```
+
+## Parallel processing for Sensitivity Analysis
+
+To limit computation time we focus only on the Meat, Milk, and Wool
+models ([Payne 1973](#ref-Payne1973)). Parallel processing is necessary
+for large parameter spaces, and the `parallel` package is used to run
+the sensitivity analysis across multiple cores. The `parLapply()`
+function is used to apply the `sensitivity_wrapper()` function across
+all sets of parameters for the Meat, Milk, and Wool models for sheep and
+goats. The results are then processed to extract the Sobol’ sensitivity
+indices for each output variable with respect to the input parameters.
+Calculations were performed on UBELIX (<https://www.id.unibe.ch/hpc>),
+the HPC cluster at the University of Bern. The code used is found in the
+Rscript “XX_SENSITIVITY.R”.
+
+``` r
+listpar = listpar[c(3:5, 19:21)] # subset to just the Meat, Milk, and Wool models for sheep and goats
+#-- track run time
+system.time({
+#-- Set up parallel processing
+cl <- makeCluster(detectCores() - 1) # leave one core free
+#-- load necessary libraries on each cluster node
+clusterEvalQ(cl, {
+  library(sensitivity)
+  library(boot)
+  library(HerdDynamics)
+  library(dplyr)
+  library(tidyr)
+  library(stringr)
+})
+
+#-- export necessary functions and variables to cluster nodes
+clusterExport(cl, varlist = c("adjust.offtake", "get.off.adjust.poff", "projectHerd2", "pop_summary2", "sens_adjust_offtake"))
+
+#-- run sensitivity analysis in parallel across all sets of parameters for Meat, Milk, and Wool models for sheep and goats
+Sensitivity_results <- parLapply(cl, listpar, sensitivity_wrapper, sens_adjust_offtake)
+
+#-- tell sensitivity object about results
+  sens_adjust_offtake_sobol.pop.size = lapply(Sensitivity_results, function(s){
+    sensitivity::tell(sens_adjust_offtake, s$mean.pop.size)
+  })
+
+  sens_adjust_offtake_sobol.pop.sd = lapply(Sensitivity_results, function(s){
+    sensitivity::tell(sens_adjust_offtake, s$pop.sd)
+  })
+  #
+  # sens_adjust_offtake_sobol.extinct = lapply(Sensitivity_results, function(s){
+  #   sensitivity::tell(sens_adjust_offtake, s$time.to.extinct)
+  # })
+
+  sobol_res = list(
+    pop.size = sens_adjust_offtake_sobol.pop.size,
+    pop.sd = sens_adjust_offtake_sobol.pop.sd
+    # time.to.extinct = sens_adjust_offtake_sobol.extinct
+  )
+  #-- send to data.frame
+  sobol_indices = lapply(sobol_res, function(s) {
+    s = unlist(s, recursive = F)
+    do.call(rbind.data.frame, lapply(s, extract_indices)) %>%
+      mutate(
+      res = str_split_i(rownames(.), "\\.", 2),
+      taxon = str_split_i(rownames(.), "\\.", 3),
+      strategy = str_split_i(rownames(.), "\\.", 4)
+    )
+  })
+
+  sobol_indices <- lapply(sobol_indices, function(s) {
+    rownames(s) <- NULL
+    return(s)
+  })
+  names(sobol_res) <- names(listpar)
+#-- clean up cluster
+stopCluster(cl)
+})
 
 #-- save results
 # saveRDS(sobol_res, file = "./output/sobol_sensitivity_results.rds")
 # saveRDS(sobol_indices, file = "./output/sobol_indices_df.rds")
 ```
 
-``` r
-#-- load results
-# readRDS("./output/sobol_sensitivity_results.rds")
-sobol_indices = readRDS("./output/sobol_indices_df.rds")
+## Results
 
+The First-order indices of the Sobol sensitivity analysis indicate how
+much variance in the output results is due to each parameter in
+isolation. Here we show only the First-order indices of Female offtake
+rate.
+<img src="README_files/figure-gfm/show-sensitivity-results-1.png" width="1050" />
 
-T7 = sobol_indices %>% 
-  filter(param=="female.offtake.range") %>% 
-  reframe(strategy, taxon, res, main_effect) %>% 
-  pivot_wider(names_from = c(strategy, res), values_from = main_effect) %>% 
-  flextable(col_keys = c(
-    "taxon", "Meat_size", "Meat_sd",  
-    "Milk_size", "Milk_sd", 
-    "Wool_size", "Wool_sd" )) %>%
-  separate_header(opts = c("center-hspan", "default-theme")) %>% 
-  # add breaks in header using as_chunk
-  add_header_lines(values = as_paragraph(list_values = c("Main effects"), align = "center")) %>%
-  colformat_double(digits = 2) %>%
-  set_table_properties(layout = "autofit", align = "center") %>%
-  theme_vanilla() 
-  # autofit() %>%
-  # theme_vanilla()
-  
-T7
-```
-
-<img src="README_files/figure-gfm/load-sensitivity-results-1.png" width="1050" />
-
-``` r
-save_as_docx(T7, path = "./tables/Table7_Sensitivity_Main_Effects.docx", pr_section = sect_properties)
-```
-
-``` r
-param_labels <- c(
-  "female.offtake.range"  = "Female offtake rate (%)",
-  "high.threshold.range"  = expression(High~lambda~threshold),
-  "low.threshold.range"   = expression(Low~lambda~threshold),
-  "p0.range"              = "Initial population (p0)"
-)
-
-#-- Fig 11 grid
-fig11.design = matrix(c(
-  1, 2,
-  3, 4,
-  5, 6 ), nrow = 3, byrow = TRUE )
-
-Fig11 <- sobol_indices %>%
-  facet_factor_fun() %>% 
-  mutate(res = factor(res, levels = c("size", "sd"))) %>% 
-  ggplot(aes(group = taxon, colour = param)) +
-  geom_point(
-    # aes(shape = taxon, x = param, y = total_effect),
-    aes(shape = taxon, x = param, y = main_effect),
-    position = position_dodge(width = 0.8), 
-    size = 2,
-    alpha = 0.6
-  ) +
-  geom_errorbar(
-    aes(x = param, 
-        # ymin = total_effect_low, ymax = total_effect_high
-        ymin = main_effect_low, ymax = main_effect_high
-        ),
-    position = position_dodge(width = 0.8),
-    width = 0.4) +
-  xlab("Sensitivity index") +
-  ylab("Main effect on Herd Size") +
-  scale_color_manual(
-    values = scales::hue_pal()(length(param_labels)),
-    breaks = names(param_labels),
-    labels = param_labels 
-  ) +
-  theme_minimal() +
-  facet_manual(
-    facets = vars( strategy, res),
-    design = fig11.design,
-    strip = strip_nested(),
-    # scales = "free_y"
-    ) +
-  theme(
-    axis.title = element_text(size = 8),
-    axis.text.x = element_blank(), # element_text(hjust = 1, size = 6),
-    axis.text.y = element_text(size = 8),
-    line = element_line(linewidth = 0.2),
-    # legend.position = "inside",
-    legend.position.inside = c(0.8, 0.3), 
-    legend.title = element_blank(),
-    strip.text = element_text(size = 10),
-    strip.background = element_rect(fill = "white", color = "grey60"),
-    panel.spacing = unit(0.2, "lines"),
-    guides(colour = guide_legend(override.aes = list(linetype = 0)),
-           shape  = guide_legend(override.aes = list(linetype = 0)))
-  )
-  
-Fig11
-```
+Comparing the main effects of the parameters across the different
+strategies and taxa can provide insights into which parameters are most
+influential in determining the mean herd size and its variability. The
+following figure shows the main effects of all parameters on mean herd
+size for the Meat, Milk, and Wool strategies for sheep and goats.
 
 <figure>
-<img
-src="README_files/figure-gfm/Fig11%20-%20plot%20total%20effect%20indices-1.png"
+<img src="README_files/figure-gfm/Fig11-1.png"
 alt="Figure 11. Main effects of parameters on mean herd size for the Meat, Milk, and Wool strategies for sheep and goats." />
 <figcaption aria-hidden="true">Figure 11. Main effects of parameters on
 mean herd size for the Meat, Milk, and Wool strategies for sheep and
 goats.</figcaption>
 </figure>
 
-``` r
-# save Fig 11
-# ggsave(
-#   plot =  Fig11 , filename = "./Figures/Fig11_Sobol_Main_Effects.jpg",
-#   dpi = 300,
-#   width = 6,
-#   height = 4
-# )
-```
-
-``` r
-Fig12 <- sobol_indices %>%
-  facet_factor_fun() %>% 
-  mutate(res = factor(res, levels = c("size", "sd"))) %>% 
-  # filter(param != "female.offtake.range") %>% 
-  ggplot(aes(group = taxon, colour = param)) +
-  geom_point(
-    aes(shape = taxon, x = param, y = total_effect),
-    # aes(shape = taxon, x = param, y = main_effect),
-    position = position_dodge(width = 0.8), 
-    size = 2,
-    alpha = 0.6
-  ) +
-  geom_errorbar(
-    aes(x = param, ymin = total_effect_low, ymax = total_effect_high),
-    position = position_dodge(width = 0.8),
-    width = 0.4) +
-  xlab("Sensitivity index") +
-  ylab("Total effect on Herd Size") +
-  scale_color_manual(
-    values = scales::hue_pal()(length(param_labels)),
-    breaks = names(param_labels),
-    labels = param_labels 
-  ) +
-  theme_minimal() +
-  facet_manual(
-    facets = vars( strategy, res),
-    design = fig11.design,
-    strip = strip_nested(),
-    # scales = "free_y"
-    ) +
-  theme(
-    axis.title = element_text(size = 8),
-    axis.text.x = element_blank(), # element_text(hjust = 1, size = 6),
-    axis.text.y = element_text(size = 8),
-    line = element_line(linewidth = 0.2),
-    # legend.position = "inside",
-    legend.position.inside = c(0.8, 0.3), 
-    legend.title = element_blank(),
-    strip.text = element_text(size = 10),
-    strip.background = element_rect(fill = "white", color = "grey60"),
-    panel.spacing = unit(0.2, "lines"),
-    guides(colour = guide_legend(override.aes = list(linetype = 0)),
-           shape  = guide_legend(override.aes = list(linetype = 0)))
-  )
-Fig12
-```
+This figure shows the Total effects, which include both the main effects
+and the interactions between parameters, of all parameters on mean herd
+size for the Meat, Milk, and Wool strategies for sheep and goats.
+Comparing the total effects across the different strategies and taxa can
+provide insights into which parameters are most influential in
+determining the mean herd size when considering both their individual
+effects and their interactions with other parameters.
 
 <figure>
-<img
-src="README_files/figure-gfm/Fig12%20plot%20total%20effect%20indices-1.png"
+<img src="README_files/figure-gfm/Fig12-1.png"
 alt="Figure 12. Total effects of parameters on mean herd size for the Meat, Milk, and Wool strategies for sheep and goats." />
 <figcaption aria-hidden="true">Figure 12. Total effects of parameters on
 mean herd size for the Meat, Milk, and Wool strategies for sheep and
 goats.</figcaption>
 </figure>
-
-``` r
-# save Fig 12
-# ggsave(
-#   plot =  Fig12 ,
-#   filename = "./Figures/Fig12_Sobol_Total_effects.jpg",
-#   dpi = 300,
-#   width = 6,
-#   height = 4
-# )
-```
 
 # References
 
