@@ -580,7 +580,7 @@ listpar = lapply(param.props, function(p) {
 ```
 
     ##    user  system elapsed 
-    ##   29.99    0.58   31.14
+    ##   28.92    0.50   29.86
 
 ``` r
 #-- save stochastic environment to replicate results
@@ -1550,6 +1550,38 @@ to changes in the starting conditions of the herd.
 ```
 
 ``` r
+#-- load results
+# readRDS("./output/sobol_sensitivity_results.rds")
+sobol_indices = readRDS("./output/sobol_indices_df.rds")
+
+
+T7 = sobol_indices %>% 
+  filter(param=="female.offtake.range") %>% 
+  reframe(strategy, taxon, res, main_effect) %>% 
+  pivot_wider(names_from = c(strategy, res), values_from = main_effect) %>% 
+  flextable(col_keys = c(
+    "taxon", "Meat_size", "Meat_sd",  
+    "Milk_size", "Milk_sd", 
+    "Wool_size", "Wool_sd" )) %>%
+  separate_header(opts = c("center-hspan", "default-theme")) %>% 
+  # add breaks in header using as_chunk
+  add_header_lines(values = as_paragraph(list_values = c("Main effects"), align = "center")) %>%
+  colformat_double(digits = 2) %>%
+  set_table_properties(layout = "autofit", align = "center") %>%
+  theme_vanilla() 
+  # autofit() %>%
+  # theme_vanilla()
+  
+T7
+```
+
+<img src="README_files/figure-gfm/load-sensitivity-results-1.png" width="1050" />
+
+``` r
+save_as_docx(T7, path = "./tables/Table7_Sensitivity_Main_Effects.docx", pr_section = sect_properties)
+```
+
+``` r
 param_labels <- c(
   "female.offtake.range"  = "Female offtake rate (%)",
   "high.threshold.range"  = expression(High~lambda~threshold),
@@ -1613,7 +1645,14 @@ Fig11 <- sobol_indices %>%
 Fig11
 ```
 
-![](README_files/figure-gfm/Fig11%20-%20plot%20total%20effect%20indices-1.png)<!-- -->
+<figure>
+<img
+src="README_files/figure-gfm/Fig11%20-%20plot%20total%20effect%20indices-1.png"
+alt="Figure 11. Main effects of parameters on mean herd size for the Meat, Milk, and Wool strategies for sheep and goats." />
+<figcaption aria-hidden="true">Figure 11. Main effects of parameters on
+mean herd size for the Meat, Milk, and Wool strategies for sheep and
+goats.</figcaption>
+</figure>
 
 ``` r
 # save Fig 11
@@ -1673,7 +1712,14 @@ Fig12 <- sobol_indices %>%
 Fig12
 ```
 
-![](README_files/figure-gfm/Fig12%20plot%20total%20effect%20indices-1.png)<!-- -->
+<figure>
+<img
+src="README_files/figure-gfm/Fig12%20plot%20total%20effect%20indices-1.png"
+alt="Figure 12. Total effects of parameters on mean herd size for the Meat, Milk, and Wool strategies for sheep and goats." />
+<figcaption aria-hidden="true">Figure 12. Total effects of parameters on
+mean herd size for the Meat, Milk, and Wool strategies for sheep and
+goats.</figcaption>
+</figure>
 
 ``` r
 # save Fig 12

@@ -14,6 +14,8 @@ link-citations: TRUE
 
 This document outlines the procedures used to simulate goat and sheep herd dynamics under the constraints of various culling strategies. The content of this document and associated scripts are supporting materials for "Evaluating Livestock Culling Practices using Population Projection Models in Neolithic Dalmatia".
 
+The full analysis can be run by exexuting the Rscript "01_ANALYSIS.R." 
+
 ```{r, setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -2133,7 +2135,7 @@ We focus on the effects of these parameters on mean herd size over the 200-year 
 # saveRDS(sobol_indices, file = "./output/sobol_indices_df.rds")
 ```
 
-```{r, load-sensitivity-results, include=FALSE, eval=TRUE }
+```{r, load-sensitivity-results, include=TRUE, eval=TRUE }
 #-- load results
 # readRDS("./output/sobol_sensitivity_results.rds")
 sobol_indices = readRDS("./output/sobol_indices_df.rds")
@@ -2162,7 +2164,7 @@ save_as_docx(T7, path = "./tables/Table7_Sensitivity_Main_Effects.docx", pr_sect
 ```
 
 
-```{r, Fig11 - plot total effect indices}
+```{r, Fig11 - plot total effect indices, include=TRUE, eval=TRUE, warning=FALSE, fig.dim=c(6,4), fig.cap="Figure 11. Main effects of parameters on mean herd size for the Meat, Milk, and Wool strategies for sheep and goats."}
 param_labels <- c(
   "female.offtake.range"  = "Female offtake rate (%)",
   "high.threshold.range"  = expression(High~lambda~threshold),
@@ -2233,7 +2235,7 @@ Fig11
 # )
 ```
 
-```{r, Fig12 plot total effect indices}
+```{r, Fig12 plot total effect indices, include=TRUE, eval=TRUE, warning=FALSE, fig.dim=c(6,4), fig.cap="Figure 12. Total effects of parameters on mean herd size for the Meat, Milk, and Wool strategies for sheep and goats."}
 Fig12 <- sobol_indices %>%
   facet_factor_fun() %>% 
   mutate(res = factor(res, levels = c("size", "sd"))) %>% 
