@@ -31,8 +31,14 @@ mortality.histogram.gg <- function(x) {
     density = freq.density,
     mid = (breaks[-length(breaks)] + breaks[-1]) / 2,
     s = s,
+    n = x, 
     label = c("A", "B", "C", "D", "EF", "G", "HI")
   )
+  
+  lab_counts <- with(plot_data,
+                     paste0(label, ": n = ", round(n, 1), " (", round(rel.freq(n) * 100), "%)"))
+  lab_counts <- paste(lab_counts, collapse = "\n")
+  
   
   # Create ggplot
   ggplot(plot_data, aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = density)) +
@@ -55,6 +61,13 @@ mortality.histogram.gg <- function(x) {
     ) +
     # geom_line( colour = rcartocolor::carto_pal(10,"Safe")[1], lwd = 1) +
     geom_line(aes(x = mid, y = s), colour = rcartocolor::carto_pal(10,"Safe")[1], size = 0.5) +
+    # include counts (n) for each label as text in rows in plot area, center-right
+    # geom_text(aes(x = 6, y = 1.2, label = "Counts:"), 
+    #           size = 3, inherit.aes = FALSE) +
+    annotate("text",
+             x = 5.7, y = 0.6,
+             label = lab_counts,
+             size = 2.5, hjust = 0) +
     # labs(title = "Histogram from counts with unequal bin widths") +
     theme_classic() + # minimal() +
     theme(

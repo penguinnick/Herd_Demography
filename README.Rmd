@@ -219,6 +219,7 @@ cprof <- lapply(cprof, function(x){
   x$culling.profile})
 
 culling.profiles <- cprof
+
 # rm(wear.df, wear.df.list, ages.list, l.names)
 ```
 
@@ -256,8 +257,30 @@ Fig2 = cowplot::plot_grid(plotlist = mort.plots, labels = names(mort.plots),
 
 ```
 
+
+```{r, mortality profiles with histograms, include=FALSE, eval=TRUE}
+source("./R/mortality_histogram_gg_ci.R")
+
+mort.plots <-  lapply(wear.df.list, function(a){mortality.histogram.gg.CI(a, CI = TRUE, iter = 1000, ci = 95, probability.correction = TRUE)})
+mort.plots = c(mort.plots[3], mort.plots[4], mort.plots[1], mort.plots[2], mort.plots[5])
+# Fig2
+Fig2v3 = cowplot::plot_grid(plotlist = mort.plots, labels = names(mort.plots), 
+                          label_size = 10, 
+                          vjust = 1.5, hjust = c(-1.5, -1.5, -0.75, -0.75, -0.75))
+
+
+ggsave(
+  plot = Fig2v3,
+  filename = "Figures/Fig2_ArchaeologicalMortProfiles_v3.jpg",
+  dpi = 300,
+  width = 8,
+  height = 4
+)
+```
+
+
 ```{r, plotFig2, echo=FALSE, fig.dim=c(8 , 4), fig.cap="Figure 2. Archaeological mortality profiles."}
-Fig2
+Fig2v3
 ```
 ### Supplementary Table S4.1: Mandible sample information
 ```{r, TableS4, echo=FALSE, include=TRUE}
