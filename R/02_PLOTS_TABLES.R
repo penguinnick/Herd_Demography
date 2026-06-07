@@ -15,7 +15,7 @@ ggsave(
   # plot = HerdDynamics::culling_multiplot(HerdDynamics::offtake_models),
   plot = culling_multiplot2(offtake_models),
   filename = paste0(figs.dir,"Fig1_TheoreticalCullingStrategies_v2.jpg"),
-  dpi = 300,
+  dpi = 800,
   width = 6,
   height = 4
 )
@@ -31,7 +31,7 @@ Fig2 = cowplot::plot_grid(plotlist = mort.plots, labels = names(mort.plots),
 ggsave(
   plot = Fig2,
   filename = paste0(figs.dir,"Fig2_ArchaeologicalMortProfiles_v2.jpg"),
-  dpi = 300,
+  dpi = 800,
   width = 8,
   height = 4
 )
@@ -60,7 +60,7 @@ Fig3 = repro.boot.df %>% facet_factor_fun() %>%
 ggsave(
   Fig3,
   filename = paste0(figs.dir,"Fig3_lambda-boot_v2.jpg"),
-  dpi = 300,
+  dpi = 800,
   width = 6,
   height = 4
 )
@@ -99,7 +99,7 @@ Fig4 = xini.df %>% facet_factor_fun() %>%
 ggsave(
        Fig4,
        filename = paste0(figs.dir,"Fig4_herd_structure_v2.jpg"),
-       dpi = 300,
+       dpi = 800,
        width = 6,
        height = 4
        )
@@ -139,7 +139,7 @@ Fig5 = tot.pop.df %>%
 ggsave(
   plot =  Fig5,
   filename = paste0(figs.dir,"Fig5_projections_v2.jpg"),
-  dpi = 300,
+  dpi = 800,
   width = 6,
   height = 4
 )
@@ -203,7 +203,7 @@ Fig6 <- summarize.pop.df(sto.res.df)  %>%
 ggsave(
   plot =  Fig6,
   filename = paste0(figs.dir,"Fig6_stochastic_rep_v2.jpg"),
-  dpi = 300,
+  dpi = 800,
   width = 6,
   height = 4
 )
@@ -251,7 +251,7 @@ Fig7 = all.res.df %>%
 ggsave(
   plot =  Fig7,
   filename = paste0(figs.dir,"Fig7_reprojections_v2.jpg"),
-  dpi = 300,
+  dpi = 800,
   width = 6,
   height = 4
 )
@@ -282,7 +282,7 @@ Fig8 =  new.vprod %>%
 ggsave(
   filename = paste0(figs.dir,"Fig8_mean_herd_size_v2.jpg"),
   plot =  Fig8,
-  dpi = 300,
+  dpi = 800,
   width = 6,
   height = 4
 )
@@ -291,7 +291,7 @@ ggsave(
 ggsave(
   plot =  plot.m("goat"),
   filename = paste0(figs.dir,"Fig9_Lambda_goat_v2.jpg"),
-  dpi = 300,
+  dpi = 800,
   width = 6,
   height = 4
 )
@@ -299,7 +299,7 @@ ggsave(
 ggsave(
   plot =  plot.m("sheep"),
   filename = paste0(figs.dir,"Fig10_Lambda_sheep_v2.jpg"),
-  dpi = 300,
+  dpi = 800,
   width = 6,
   height = 4
 )

@@ -216,12 +216,12 @@ Parturition rate is also referred to as the annual reproductive rate
 (ARR) and is calculated as: $$ARR=\frac{l*365}{i}$$ where `l` is the
 litter size (i.e., prolificacy rate) multiplied by the number of days in
 the year and `i` is the parturition interval ([Upton
-1984](#ref-Upton1984ModelsOI); [R. T. Wilson, Peacock, and Sayers
-1984](#ref-Wilson1984)). To keep variation in fertility consistent,
-parturition varies from year to year, depending on the prolificacy
-rates, which are generated as described below. `parturitionInterval` is
-set to 300 days, reflecting a mean of 10 months for bot goats and sheep
-([R. T. Wilson 1989](#ref-Wilson1989)).
+1984](#ref-Upton1984ModelsOI); [Wilson et al. 1984](#ref-Wilson1984)).
+To keep variation in fertility consistent, parturition varies from year
+to year, depending on the prolificacy rates, which are generated as
+described below. `parturitionInterval` is set to 300 days, reflecting a
+mean of 10 months for bot goats and sheep ([Wilson
+1989](#ref-Wilson1989)).
 
 `prolificacy` specifies the prolificacy rate, defined as the number of
 live offspring per parturition per year. Goats are capable of giving
@@ -582,7 +582,7 @@ listpar = lapply(param.props, function(p) {
 ```
 
     ##    user  system elapsed 
-    ##   31.69    0.46   36.62
+    ##   44.41    1.17   53.50
 
 ``` r
 #-- save stochastic environment to replicate results
@@ -1024,13 +1024,11 @@ stochastic.sim.res = replicate(n = nbrep,
                                }),
                                simplify = "array")
 })
+
+save(stochastic.sim.res, file = "output/stochastic_sim_res.RData")
 ```
 
-    ##    user  system elapsed 
-    ## 4100.56   84.32 4245.89
-
 ``` r
-save(stochastic.sim.res, file = "output/stochastic_sim_res.RData")
 load(file = "output/stochastic_sim_res.RData")
 ```
 
@@ -1604,8 +1602,7 @@ goats.</figcaption>
 
 # References
 
-<div id="refs" class="references csl-bib-body hanging-indent"
-entry-spacing="0">
+<div id="refs" class="references csl-bib-body hanging-indent">
 
 <div id="ref-Lefkovitch1965" class="csl-entry">
 
@@ -1624,8 +1621,8 @@ Matrix Models*.
 
 <div id="ref-Lesnoff2024" class="csl-entry">
 
-———. 2024a. *<span class="nocase">mmage: A R package for sex-and-age
-population matrix models</span>*.
+Lesnoff, Matthieu. 2024a. *<span class="nocase">mmage: A R package for
+sex-and-age population matrix models</span>*.
 
 </div>
 
@@ -1685,9 +1682,10 @@ Barbara. <http://dissertations.umi.com/ucsb:16721>.
 
 <div id="ref-Triozzi2025" class="csl-entry">
 
-———. 2025. “<span class="nocase">Age-at-Death Analysis of Caprine
-mandibles from Neolithic Sites in Dalmatia \[Data set\]</span>.”
-*Zenodo*. https://doi.org/<https://doi.org/10.5281/zenodo.17697101>.
+Triozzi, Nicholas Peter. 2025. “<span class="nocase">Age-at-Death
+Analysis of Caprine mandibles from Neolithic Sites in Dalmatia \[Data
+set\]</span>.” *Zenodo*, ahead of print.
+https://doi.org/<https://doi.org/10.5281/zenodo.17697101>.
 
 </div>
 
@@ -1696,9 +1694,8 @@ mandibles from Neolithic Sites in Dalmatia \[Data set\]</span>.”
 Upton, Martin. 1984. “<span class="nocase">Models of improved production
 systems for small ruminants</span>.” In *Proceedings of the Workshop on
 Small Ruminant Production Systems in the Humid Zone of West Africa*,
-edited by J. E. Sumberg and K. Cassaday, 55–67. Ibadan, Nigeria:
-International Livestock Centre for Africa.
-<https://api.semanticscholar.org/CorpusID:131461953>.
+edited by J. E. Sumberg and K. Cassaday. International Livestock Centre
+for Africa. <https://api.semanticscholar.org/CorpusID:131461953>.
 
 </div>
 

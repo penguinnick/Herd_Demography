@@ -1,11 +1,15 @@
 ---
-title: "Evaluating Livestock Culling Practices using Population Projection Models in Neolithic Dalmatia"
-subtitle: "Supplemental Information 3"
+title: Evaluating Livestock Culling Practices using Population Projection Models in
+  Neolithic Dalmatia
 author: "Nicholas Triozzi"
 date: "2026-03-16"
-output: github_document
+output:
+  github_document: default
+  word_document: default
+  pdf_document: default
+subtitle: Supplemental Information 3
 bibliography: Appendix_bib.bib
-link-citations: TRUE
+link-citations: true
 ---
 
 # Livestock Population Dynamics and Optimziation of Culling Rates
@@ -94,7 +98,7 @@ culling_multiplot2(offtake_models)
 #   # plot = HerdDynamics::culling_multiplot(HerdDynamics::offtake_models),
 #   plot = culling_multiplot2(offtake_models),
 #   "Figures/Fig1_TheoreticalCullingStrategies_v2.jpg",
-#   dpi = 300,
+#   dpi = 800,
 #   width = 6,
 #   height = 4
 # )
@@ -249,7 +253,7 @@ Fig2 = cowplot::plot_grid(plotlist = mort.plots, labels = names(mort.plots),
 # ggsave(
 #   plot = Fig2,
 #   filename = "Figures/Fig2_ArchaeologicalMortProfiles_v2.jpg",
-#   dpi = 300,
+#   dpi = 800,
 #   width = 8,
 #   height = 4
 # )
@@ -269,13 +273,13 @@ Fig2v3 = cowplot::plot_grid(plotlist = mort.plots, labels = names(mort.plots),
                           vjust = 1.5, hjust = c(-1.5, -1.5, -0.75, -0.75, -0.75))
 
 
-ggsave(
-  plot = Fig2v3,
-  filename = "Figures/Fig2_ArchaeologicalMortProfiles_v3.jpg",
-  dpi = 300,
-  width = 8,
-  height = 4
-)
+# ggsave(
+#   plot = Fig2v3,
+#   filename = "Figures/Fig2_ArchaeologicalMortProfiles_v3.jpg",
+#   dpi = 800,
+#   width = 8,
+#   height = 4
+# )
 ```
 
 
@@ -872,7 +876,7 @@ Fig3
 # ggsave(
 #   Fig3,
 #   filename = "./Figures/Fig3_lambda-boot_v2.jpg",
-#   dpi = 300,
+#   dpi = 800,
 #   width = 6,
 #   height = 4
 # )
@@ -1297,7 +1301,7 @@ matrix.to.df = function(mat) {
 ```
 
 Run replicated simulations save time by loading results from output folder.
-```{r, run-replicates, echo=TRUE, cache=TRUE}
+```{r, run-replicates, echo=TRUE, cache=TRUE, eval=FALSE}
 #-- set seed, number of replicates and cycles
 set.seed(1056)
 # nbrep = 10
@@ -1321,6 +1325,10 @@ stochastic.sim.res = replicate(n = nbrep,
 })
 
 save(stochastic.sim.res, file = "output/stochastic_sim_res.RData")
+
+```
+
+```{r, load-replicates, echo=TRUE, eval=TRUE}
 load(file = "output/stochastic_sim_res.RData")
 ```
 
