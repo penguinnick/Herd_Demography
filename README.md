@@ -11,8 +11,8 @@ Nicholas Triozzi
 This document outlines the procedures used to simulate goat and sheep
 herd dynamics under the constraints of various culling strategies. The
 content of this document and associated scripts are supporting materials
-for “Evaluating Livestock Culling Practices using Population Projection
-Models in Neolithic Dalmatia”.
+for [“Evaluating Livestock Culling Practices using Population Projection
+Models in Neolithic Dalmatia”](https://doi.org/10.5334/jcaa.257).
 
 The full analysis can be run by exexuting the Rscript “01_ANALYSIS.R.”
 
